@@ -64,6 +64,8 @@
         }
         .slider-container {
             position: relative;
+            display: flex;
+            align-items: center;
         }
         input[type="range"] {
             width: 100%;
@@ -99,6 +101,7 @@
             font-weight: bold;
             color: #667eea;
             margin-top: 10px;
+            display: inline-block;
         }
         button {
             width: 100%;
@@ -175,8 +178,8 @@
         <div class="form-group" style="margin-bottom: 5px;">
             <label for="currentPercent">当前电量百分比</label>
             <div class="slider-container">
-                <input type="range" id="currentPercent" min="0" max="90" value="20" onchange="calculate()">
                 <div class="slider-value"><span id="percentDisplay">20</span>%</div>
+                <div style="flex:1;"><input type="range" id="currentPercent" min="0" max="90" value="20" onchange="calculate()"></div>
             </div>
         </div>
 
@@ -197,7 +200,7 @@
 
         <div class="info-box">
             <strong>💡 说明：(大致功率阶梯)</strong><br>
-            • 3.5kW/7kW：90%以上功率降低10%,95%以上功率降低20%<br>
+            • 3.5kW/7kW：90%以上功率降低20%,95%以上功率降低50%<br>
             • 20kW：70%以上→18kW，80%以上→14kW，95%以上→10kW<br>
             • 100kW：60%以上→75kW，75%以上→35kW，95%以上→10kW
         </div>
@@ -219,8 +222,8 @@
             if (power === 3.5 || power === 7) {
                 return [
                     { from: 0, to: 90, power: power },
-                    { from: 90, to: 95, power: power * 0.9 },
-                    { from: 95, to: 100, power: power * 0.8 }
+                    { from: 90, to: 95, power: power * 0.8 },
+                    { from: 95, to: 100, power: power * 0.5 }
                 ];
             } else if (power === 20) {
                 return [
