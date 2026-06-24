@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>充电时间估算器</title>
+    <title>领克08充电剩余时间估算器</title>
     <style>
         * {
             margin: 0;
@@ -31,7 +31,7 @@
             text-align: center;
             color: #333;
             margin-bottom: 10px;
-            font-size: 28px;
+            font-size: 24px;
         }
         .subtitle {
             text-align: center;
@@ -167,7 +167,7 @@
             <select id="powerSelect" onchange="calculate()">
                 <option value="3.5">3.5 kW（随车充）</option>
                 <option value="7">7 kW（交流慢充）</option>
-                <option value="20">20 kW（直流充）</option>
+                <option value="20" selected=>20 kW（直流充）</option>
                 <option value="100">100 kW+（快充）</option>
             </select>
         </div>
