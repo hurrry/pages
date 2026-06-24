@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>充电时间估算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #444;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .slider-container {
+            position: relative;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+            margin-top: 10px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .slider-value {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .results {
+            margin-top: 20px;
+            display: none;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .result-card h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .result-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .result-detail {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 充电时间估算器</h1>
+        <p class="subtitle">电池容量：38.2 kWh | 转换效率：95%</p>
+
+        <div class="form-group">
+            <label for="powerSelect">选择充电功率</label>
+            <select id="powerSelect" onchange="calculate()">
+                <option value="3.5">3.5 kW（随车充）</option>
+                <option value="7">7 kW（交流慢充）</option>
+                <option value="20" selected=>20 kW（直流充）</option>
+                <option value="100">100 kW+（快充）</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 5px;">
+            <label for="currentPercent">当前电量百分比</label>
+            <div class="slider-container">
+                <input type="range" id="currentPercent" min="0" max="90" value="20" onchange="calculate()">
+                <div class="slider-value"><span id="percentDisplay">20</span>%</div>
+            </div>
+        </div>
+
+        <button onclick="calculate()">计算充电时间</button>
+
+        <div class="results" id="results">
+            <div class="result-card">
+                <h3>🔋 充到 80% 所需时间</h3>
+                <div class="result-value" id="timeTo80">--</div>
+                <div class="result-detail" id="detailTo80"></div>
+            </div>
+            <div class="result-card">
+                <h3>🔋 充到 100% 所需时间</h3>
+                <div class="result-value" id="timeTo100">--</div>
+                <div class="result-detail" id="detailTo100"></div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>💡 说明：(大致功率阶梯)</strong><br>
+            • 3.5kW/7kW：90%以上功率降低20%,95%以上功率降低50%<br>
+            • 20kW：70%以上→18kW，80%以上→14kW，95%以上→10kW<br>
+            • 100kW：60%以上→75kW，75%以上→35kW，95%以上→10kW
+        </div>
+    </div>
+
+    <script>
+        const batteryCapacity = 38.2; // kWh
+        const efficiency = 0.95;
+
+        // 滑动条实时更新显示
+        const slider = document.getElementById('currentPercent');
+        const display = document.getElementById('percentDisplay');
+        slider.addEventListener('input', function() {
+            display.textContent = this.value;
+        });
+
+        function getPowerSegments(powerType) {
+            const power = parseFloat(powerType);
+            if (power === 3.5 || power === 7) {
+                return [
+                    { from: 0, to: 90, power: power },
+                    { from: 90, to: 95, power: power * 0.8 },
+                    { from: 95, to: 100, power: power * 0.5 }
+                ];
+            } else if (power === 20) {
+                return [
+                    { from: 0, to: 70, power: 20 },
+                    { from: 70, to: 90, power: 19 },
+                    { from: 90, to: 95, power: 18 },
+                    { from: 95, to: 98, power: 10 },
+                    { from: 98, to: 100, power: 8 }
+                ];
+            } else if (power === 100) {
+                return [
+                    { from: 0, to: 60, power: 100 },
+                    { from: 60, to: 75, power: 75 },
+                    { from: 75, to: 80, power: 65 },
+                    { from: 80, to: 90, power: 35 },
+                    { from: 90, to: 95, power: 20 },
+                    { from: 95, to: 97, power: 16 },
+                    { from: 97, to: 100, power: 8 }
+                ];
+            }
+            return [];
+        }
+
+        function calculateTime(currentPercent, targetPercent, powerType) {
+            if (currentPercent >= targetPercent) return 0;
+
+            const segments = getPowerSegments(powerType);
+            let totalHours = 0;
+
+            for (let seg of segments) {
+                let segStart = Math.max(currentPercent, seg.from);
+                let segEnd = Math.min(targetPercent, seg.to);
+
+                if (segStart < segEnd) {
+                    let percentRange = segEnd - segStart;
+                    let energyNeeded = batteryCapacity * percentRange / 100;
+                    let timeHours = energyNeeded / (seg.power * efficiency);
+                    totalHours += timeHours;
+                }
+            }
+
+            return totalHours;
+        }
+
+        function formatTime(hours) {
+            if (hours < 1) {
+                let minutes = Math.round(hours * 60);
+                return `${minutes} 分钟`;
+            } else {
+                let h = Math.floor(hours);
+                let m = Math.round((hours - h) * 60);
+                if (m === 60) {
+                    h++;
+                    m = 0;
+                }
+                if (m === 0) {
+                    return `${h} 小时`;
+                }
+                return `${h} 小时 ${m} 分钟`;
+            }
+        }
+
+        function calculate() {
+            const powerType = document.getElementById('powerSelect').value;
+            const currentPercent = parseInt(document.getElementById('currentPercent').value);
+
+            const timeTo80 = calculateTime(currentPercent, 80, powerType);
+            const timeTo100 = calculateTime(currentPercent, 100, powerType);
+
+            document.getElementById('timeTo80').textContent = currentPercent >= 80 ? '已完成' : formatTime(timeTo80);
+            document.getElementById('timeTo100').textContent = formatTime(timeTo100);
+
+            // 计算需要的电量
+            const energyTo80 = currentPercent >= 80 ? 0 : (batteryCapacity * (80 - currentPercent) / 100).toFixed(2);
+            const energyTo100 = (batteryCapacity * (100 - currentPercent) / 100).toFixed(2);
+
+            document.getElementById('detailTo80').textContent = currentPercent >= 80 ? '' : `需充入 ${energyTo80} kWh`;
+            document.getElementById('detailTo100').textContent = `需充入 ${energyTo100} kWh`;
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        // 页面加载时自动计算一次
+        window.onload = function() {
+            calculate();
+        };
+    </script>
+</body>
+</html>
