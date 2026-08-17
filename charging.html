@@ -170,6 +170,7 @@
             <select id="powerSelect" onchange="calculate()">
                 <option value="3.5">3.5 kW（随车充）</option>
                 <option value="7">7 kW（交流慢充）</option>
+                <option value="11">11 kW（直流慢充）</option>
                 <option value="20" selected=>20 kW（直流充）</option>
                 <option value="100">100 kW+（快充）</option>
             </select>
@@ -225,6 +226,14 @@
                     { from: 90, to: 95, power: power * 0.8 },
                     { from: 95, to: 100, power: power * 0.5 }
                 ];
+            } else if (power === 11) {
+                return [
+                    { from: 0, to: 70, power: 11 },
+                    { from: 70, to: 90, power: 10 },
+                    { from: 90, to: 95, power: 9 },
+                    { from: 95, to: 98, power: 8 },
+                    { from: 98, to: 100, power: 7 }
+                ];
             } else if (power === 20) {
                 return [
                     { from: 0, to: 70, power: 20 },
@@ -233,7 +242,7 @@
                     { from: 95, to: 98, power: 10 },
                     { from: 98, to: 100, power: 8 }
                 ];
-            } else if (power === 100) {
+            }else if (power === 100) {
                 return [
                     { from: 0, to: 60, power: 100 },
                     { from: 60, to: 75, power: 75 },
