@@ -158,22 +158,49 @@
             color: #555;
             line-height: 1.6;
         }
+        /* 新增：同行布局 */
+        .inline-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .inline-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .inline-row .form-group:first-child {
+            flex: 1.4;
+        }
+        .unit-label {
+            font-size: 12px;
+            color: #888;
+            margin-left: 4px;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⚡ 充电时间估算器</h1>
-        <p class="subtitle">电池容量：38.2 kWh | 转换效率：95%</p>
+        <p class="subtitle">转换效率：95%</p>
 
         <div class="form-group">
-            <label for="powerSelect">选择充电功率</label>
-            <select id="powerSelect" onchange="calculate()">
-                <option value="3.5">3.5 kW（随车充）</option>
-                <option value="7">7 kW（交流慢充）</option>
-                <option value="11">11 kW（直流慢充）</option>
-                <option value="20" selected=>20 kW（直流充）</option>
-                <option value="100">100 kW+（快充）</option>
-            </select>
+            <div class="inline-row">
+                <div class="form-group">
+                    <label for="powerSelect">选择充电功率</label>
+                    <select id="powerSelect" onchange="calculate()">
+                        <option value="3.5">3.5 kW（随车充）</option>
+                        <option value="7">7 kW（交流慢充）</option>
+                        <option value="11">11 kW（直流慢充）</option>
+                        <option value="20" selected>20 kW（直流充）</option>
+                        <option value="100">100 kW+（直流快充）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batteryCapacity">电池容量<span class="unit-label">(kWh)</span></label>
+                    <input type="number" id="batteryCapacity" value="38.2" step="1" min="1" onchange="calculate()">
+                </div>
+            </div>
         </div>
 
         <div class="form-group" style="margin-bottom: 5px;">
@@ -201,14 +228,13 @@
 
         <div class="info-box">
             <strong>💡 说明：(大致功率阶梯)</strong><br>
-            • 3.5kW/7kW：90%以上功率降低20%,95%以上功率降低50%<br>
+            • 3.5kW/7kW/11kW：90%以上功率降低20%,95%以上功率降低50%<br>
             • 20kW：70%以上→18kW，80%以上→14kW，95%以上→10kW<br>
             • 100kW：60%以上→75kW，75%以上→35kW，95%以上→10kW
         </div>
     </div>
 
     <script>
-        const batteryCapacity = 38.2; // kWh
         const efficiency = 0.95;
 
         // 滑动条实时更新显示
@@ -218,17 +244,23 @@
             display.textContent = this.value;
         });
 
+        function getBatteryCapacity() {
+            let val = parseFloat(document.getElementById('batteryCapacity').value);
+            if (isNaN(val) || val <= 0) val = 38.2;
+            return val;
+        }
+
         function getPowerSegments(powerType) {
             const power = parseFloat(powerType);
             if (power === 3.5 || power === 7) {
                 return [
-                    { from: 0, to: 90, power: power },
+                    { from: 0, to: 90, power: power* 0.99 },
                     { from: 90, to: 95, power: power * 0.8 },
                     { from: 95, to: 100, power: power * 0.5 }
                 ];
             } else if (power === 11) {
                 return [
-                    { from: 0, to: 70, power: 11 },
+                    { from: 0, to: 70, power: 10.5 },
                     { from: 70, to: 90, power: 10 },
                     { from: 90, to: 95, power: 9 },
                     { from: 95, to: 98, power: 8 },
@@ -236,7 +268,7 @@
                 ];
             } else if (power === 20) {
                 return [
-                    { from: 0, to: 70, power: 20 },
+                    { from: 0, to: 70, power: 19.8 },
                     { from: 70, to: 90, power: 19 },
                     { from: 90, to: 95, power: 18 },
                     { from: 95, to: 98, power: 10 },
@@ -259,6 +291,7 @@
         function calculateTime(currentPercent, targetPercent, powerType) {
             if (currentPercent >= targetPercent) return 0;
 
+            const batteryCapacity = getBatteryCapacity();
             const segments = getPowerSegments(powerType);
             let totalHours = 0;
 
@@ -298,6 +331,7 @@
         function calculate() {
             const powerType = document.getElementById('powerSelect').value;
             const currentPercent = parseInt(document.getElementById('currentPercent').value);
+            const batteryCapacity = getBatteryCapacity();
 
             const timeTo80 = calculateTime(currentPercent, 80, powerType);
             const timeTo100 = calculateTime(currentPercent, 100, powerType);
