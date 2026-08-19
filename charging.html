@@ -254,7 +254,7 @@
             const power = parseFloat(powerType);
             if (power === 3.5 || power === 7) {
                 return [
-                    { from: 0, to: 90, power: power* 0.99 },
+                    { from: 0, to: 90, power: power* 0.95 },
                     { from: 90, to: 95, power: power * 0.8 },
                     { from: 95, to: 100, power: power * 0.5 }
                 ];
