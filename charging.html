@@ -130,7 +130,7 @@
         .result-card {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             border-radius: 15px;
-            padding: 20px;
+            padding: 10px 20px;
             margin-bottom: 15px;
         }
         .result-card h3 {
@@ -204,10 +204,17 @@
         </div>
 
         <div class="form-group" style="margin-bottom: 5px;">
-            <label for="currentPercent">当前电量百分比</label>
+            <label for="currentPercent" style="margin-bottom: 0;">当前电量百分比</label>
             <div class="slider-container">
                 <div class="slider-value"><span id="percentDisplay">20</span>%</div>
                 <div style="flex:1;"><input type="range" id="currentPercent" min="0" max="90" value="20" onchange="calculate()"></div>
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 5px;">
+            <label for="targetPercent" style="margin-bottom: 0;">目标电量百分比</label>
+            <div class="slider-container">
+                <div class="slider-value"><span id="targetDisplay">80</span>%</div>
+                <div style="flex:1;"><input type="range" id="targetPercent" min="30" max="100" value="80" onchange="calculate()"></div>
             </div>
         </div>
 
@@ -215,7 +222,7 @@
 
         <div class="results" id="results">
             <div class="result-card">
-                <h3>🔋 充到 80% 所需时间</h3>
+                <h3>🔋 充到 <span id="targetDisplay2">80</span>% 所需时间</h3>
                 <div class="result-value" id="timeTo80">--</div>
                 <div class="result-detail" id="detailTo80"></div>
             </div>
@@ -243,6 +250,15 @@
         slider.addEventListener('input', function() {
             display.textContent = this.value;
         });
+
+        const targetSlider = document.getElementById('targetPercent');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const targetDisplay2 = document.getElementById('targetDisplay2');
+        targetSlider.addEventListener('input', function() {
+            targetDisplay.textContent = this.value;
+            targetDisplay2.textContent = this.value;
+        });
+        
 
         function getBatteryCapacity() {
             let val = parseFloat(document.getElementById('batteryCapacity').value);
@@ -339,9 +355,10 @@
         function calculate() {
             const powerType = document.getElementById('powerSelect').value;
             const currentPercent = parseInt(document.getElementById('currentPercent').value);
+            const targetPercent = parseInt(document.getElementById('targetPercent').value);
             const batteryCapacity = getBatteryCapacity();
 
-            const timeTo80 = calculateTime(currentPercent, 80, powerType);
+            const timeTo80 = calculateTime(currentPercent, targetPercent, powerType);
             const timeTo100 = calculateTime(currentPercent, 100, powerType);
 
             document.getElementById('timeTo80').textContent = currentPercent >= 80 ? '已完成' : formatTime(timeTo80);
