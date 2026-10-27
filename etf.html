@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="ETF 每日份额追踪：上交所、深交所份额数据，本地沉淀，历史折线图。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M13 43l11-11 9 6 18-19' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>ETF 份额追踪 · 每日份额与历史曲线</title>
+  <style>
+    :root {
+      --bg: #f2f6f4;
+      --panel: #ffffff;
+      --panel-2: #f8fbfa;
+      --ink: #10231f;
+      --ink-2: #29443d;
+      --muted: #6a7f78;
+      --muted-2: #8da19a;
+      --line: #e1ebe7;
+      --line-strong: #cfddd7;
+      --teal: #0f766e;
+      --teal-2: #14b8a6;
+      --teal-soft: #e5f5f1;
+      --navy: #0d2c2a;
+      --navy-2: #123b37;
+      --red: #d33b3b;
+      --red-soft: #fff0ee;
+      --green: #0b8f68;
+      --green-soft: #e9f8f1;
+      --amber: #b7791f;
+      --shadow: 0 12px 34px rgba(16, 54, 47, .07);
+      --shadow-sm: 0 4px 14px rgba(16, 54, 47, .05);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --font: "Inter", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(1000px 500px at 8% -10%, rgba(20, 184, 166, .10), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(15, 118, 110, .08), transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: var(--teal); }
+    ::selection { background: rgba(20, 184, 166, .22); }
+
+    .app { max-width: 1500px; margin: 0 auto; padding: 0 22px 30px; }
+
+    /* ── top bar ───────────────────────────────────────────── */
+    .topbar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 18px 0 20px;
+      padding: 18px 22px;
+      border-radius: 20px;
+      color: #ecfffb;
+      background:
+        radial-gradient(600px 240px at 12% 0%, rgba(45, 212, 191, .22), transparent 60%),
+        linear-gradient(120deg, #0a2523 0%, #0d302c 55%, #10443d 100%);
+      box-shadow: 0 18px 42px rgba(9, 43, 38, .20);
+      overflow: hidden;
+    }
+    .topbar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+      pointer-events: none;
+    }
+    .brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .brand-mark {
+      flex: 0 0 auto;
+      width: 46px; height: 46px;
+      display: grid; place-items: center;
+      border-radius: 13px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .6px;
+      color: #062b27;
+      background: linear-gradient(145deg, #7ce7d6, #2dd4bf 55%, #14b8a6);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 6px 16px rgba(20, 184, 166, .25);
+    }
+    .brand h1 { margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: .2px; font-weight: 750; }
+    .brand p { margin: 4px 0 0; color: rgba(226, 255, 250, .64); font-size: 12px; letter-spacing: .3px; }
+    .top-actions { position: relative; z-index: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .source-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid rgba(204, 251, 241, .16);
+      border-radius: 999px;
+      background: rgba(255,255,255,.055);
+      color: rgba(236, 255, 251, .82);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .source-pill i { width: 5px; height: 5px; border-radius: 50%; background: #5eead4; box-shadow: 0 0 0 3px rgba(94, 234, 212, .12); }
+    .sync-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      min-width: 94px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(255,255,255,.08);
+      color: rgba(236, 255, 251, .75);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .sync-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #5eead4; }
+    .sync-status.busy::before { background: #fbbf24; animation: blink 1s infinite; }
+    .sync-status.error::before { background: #fb7185; }
+    @keyframes blink { 50% { opacity: .35; } }
+
+    /* ── layout ────────────────────────────────────────────── */
+    .layout { display: grid; grid-template-columns: 306px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .sidebar { position: sticky; top: 18px; display: grid; gap: 14px; min-width: 0; }
+    .main { display: grid; gap: 16px; min-width: 0; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(207, 221, 215, .72);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .picker { padding: 18px; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+    .card-head > span:first-child { font-size: 13px; font-weight: 750; letter-spacing: .3px; }
+    .eyebrow { color: var(--muted-2); font-size: 11px; }
+
+    .field-label, .range-label {
+      display: block;
+      margin: 0 0 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .3px;
+    }
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: "";
+      position: absolute;
+      right: 13px; top: 50%;
+      width: 7px; height: 7px;
+      border-right: 1.7px solid var(--muted);
+      border-bottom: 1.7px solid var(--muted);
+      transform: translateY(-65%) rotate(45deg);
+      pointer-events: none;
+    }
+    select {
+      width: 100%;
+      appearance: none;
+      padding: 11px 34px 11px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    select:hover { border-color: #adc9c0; }
+    select:focus { border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(20, 184, 166, .13); background: #fff; }
+
+    .manual-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 9px; }
+    .code-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 1px;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .code-input::placeholder { color: #a7b8b2; font-family: var(--font); letter-spacing: 0; }
+    .code-input:focus { border-color: var(--teal-2); box-shadow: 0 0 0 3px rgba(20, 184, 166, .13); }
+    .hint { margin: 8px 0 0; color: var(--muted-2); font-size: 10.5px; line-height: 1.55; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      min-height: 38px;
+      padding: 9px 13px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      transition: transform .16s, box-shadow .16s, background .16s, border-color .16s, opacity .16s;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { cursor: wait; opacity: .72; transform: none; }
+    .btn-dark { background: var(--navy); color: #effffb; box-shadow: 0 5px 12px rgba(13, 44, 42, .15); }
+    .btn-dark:hover { background: #164b44; }
+    .btn-primary {
+      width: 100%;
+      margin-top: 15px;
+      background: linear-gradient(135deg, #0f8f83, #0f766e);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(15, 118, 110, .20);
+    }
+    .btn-primary:hover { box-shadow: 0 10px 22px rgba(15, 118, 110, .26); }
+    .btn-ghost {
+      width: 100%;
+      margin-top: 8px;
+      background: #fff;
+      border-color: var(--line-strong);
+      color: var(--ink-2);
+    }
+    .btn-ghost:hover { border-color: #adc9c0; background: var(--panel-2); }
+    .spinner {
+      display: none;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .btn.loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      margin: 4px 0 1px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--panel-2);
+    }
+    .segmented button {
+      padding: 7px 4px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      transition: background .16s, color .16s, box-shadow .16s;
+    }
+    .segmented button:hover { color: var(--ink); }
+    .segmented button.active {
+      background: #fff;
+      color: var(--teal);
+      box-shadow: 0 2px 7px rgba(16, 54, 47, .08);
+    }
+
+    .storage-line {
+      display: flex; align-items: center; gap: 7px;
+      margin-top: 14px;
+      padding-top: 13px;
+      border-top: 1px dashed var(--line);
+      color: var(--muted-2);
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .storage-dot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(11, 143, 104, .10); }
+    .storage-dot.warn { background: var(--amber); box-shadow: 0 0 0 3px rgba(183, 121, 31, .10); }
+
+    .file-hint {
+      margin-top: 12px;
+      padding: 10px 11px;
+      border: 1px solid #f3dfb8;
+      border-radius: 11px;
+      background: #fffaf0;
+      color: #7a5a1e;
+      font-size: 10.5px;
+      line-height: 1.55;
+    }
+    .file-hint code { font-family: var(--mono); font-size: 10px; background: rgba(183, 121, 31, .09); padding: 1px 4px; border-radius: 4px; word-break: break-all; }
+    .file-hint code.nowrap { white-space: nowrap; word-break: normal; }
+
+    details.notes { padding: 0; overflow: hidden; }
+    details.notes summary {
+      list-style: none;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink-2);
+    }
+    details.notes summary::-webkit-details-marker { display: none; }
+    details.notes summary::after { content: "+"; font-size: 14px; color: var(--muted-2); font-weight: 500; }
+    details.notes[open] summary::after { content: "−"; }
+    .notes-body { padding: 0 16px 15px; color: var(--muted); font-size: 10.5px; line-height: 1.65; }
+    .notes-body p { margin: 0 0 9px; }
+    .notes-body p:last-child { margin-bottom: 0; }
+    .notes-body b { color: var(--ink-2); }
+    .notes-body code { font-family: var(--mono); font-size: 9.5px; color: var(--teal); background: var(--teal-soft); padding: 1px 4px; border-radius: 4px; word-break: break-all; }
+
+    /* ── hero ──────────────────────────────────────────────── */
+    .hero { padding: 22px 24px 0; overflow: hidden; position: relative; }
+    .hero::before {
+      content: "";
+      position: absolute;
+      right: -90px; top: -130px;
+      width: 330px; height: 330px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(20, 184, 166, .13), transparent 68%);
+      pointer-events: none;
+    }
+    .hero-top { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .kicker { color: var(--teal); font-size: 10.5px; font-weight: 750; letter-spacing: 1px; text-transform: uppercase; }
+    .hero h2 { margin: 6px 0 0; font-size: clamp(23px, 2.6vw, 31px); line-height: 1.16; letter-spacing: -.4px; font-weight: 780; }
+    .hero-sub { margin: 8px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+    .hero-date {
+      flex: 0 0 auto;
+      min-width: 112px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #fff, #f7fbf9);
+      text-align: right;
+    }
+    .hero-date span { display: block; color: var(--muted-2); font-size: 9.5px; letter-spacing: .4px; }
+    .hero-date strong { display: block; margin-top: 4px; font-family: var(--mono); font-size: 14px; color: var(--ink); letter-spacing: -.2px; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 20px -24px 0; border-top: 1px solid var(--line); background: var(--panel-2); }
+    .kpi { padding: 16px 20px 17px; border-right: 1px solid var(--line); min-width: 0; }
+    .kpi:last-child { border-right: 0; }
+    .kpi > span { display: block; color: var(--muted); font-size: 10.5px; font-weight: 600; letter-spacing: .2px; }
+    .kpi > strong {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: clamp(20px, 2.1vw, 26px);
+      line-height: 1.15;
+      letter-spacing: -.5px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+    .kpi > small { margin-left: 4px; color: var(--muted-2); font-size: 10px; font-weight: 600; }
+    .kpi .sub { display: block; margin-top: 4px; color: var(--muted-2); font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .up { color: var(--red) !important; }
+    .down { color: var(--green) !important; }
+    .flat { color: var(--muted) !important; }
+
+    /* ── chart ─────────────────────────────────────────────── */
+    .chart-card { padding: 18px 18px 12px; }
+    .chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 0 5px 8px; }
+    .chart-head h3, .table-head h3 { margin: 0; font-size: 14px; font-weight: 750; letter-spacing: .1px; }
+    .chart-head p, .table-head p { margin: 4px 0 0; color: var(--muted-2); font-size: 10px; }
+    .chart-legend { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; white-space: nowrap; padding-top: 2px; }
+    .legend-line { width: 18px; height: 3px; border-radius: 99px; background: linear-gradient(90deg, #0f766e, #2dd4bf); }
+    .chart-wrap { position: relative; width: 100%; min-height: 320px; }
+    #chart { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 6px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.88));
+      border-radius: 12px;
+    }
+    .chart-empty[hidden] { display: none; }
+    .chart-empty strong { color: var(--ink-2); font-size: 13px; }
+    .chart-empty span { color: var(--muted-2); font-size: 10.5px; }
+    .chart-tooltip {
+      position: absolute;
+      z-index: 5;
+      width: 186px;
+      padding: 10px 12px;
+      border: 1px solid rgba(207, 221, 215, .9);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, .97);
+      box-shadow: 0 12px 28px rgba(16, 54, 47, .14);
+      pointer-events: none;
+      opacity: 0;
+      transform: translate3d(0, 0, 0);
+      transition: opacity .12s;
+      backdrop-filter: blur(8px);
+    }
+    .chart-tooltip.show { opacity: 1; }
+    .tt-date { color: var(--muted); font-family: var(--mono); font-size: 10px; margin-bottom: 7px; }
+    .tt-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 4px; }
+    .tt-row span { color: var(--muted); font-size: 10px; }
+    .tt-row strong { font-size: 11.5px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .chart-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 5px 0; color: var(--muted-2); font-size: 9.5px; border-top: 1px dashed var(--line); margin-top: 4px; }
+    .chart-foot span:last-child { text-align: right; }
+
+    /* ── table ─────────────────────────────────────────────── */
+    .table-card { overflow: hidden; }
+    .table-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 13px; }
+    .count-badge { padding: 5px 9px; border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .table-scroll { max-height: 370px; overflow: auto; border-top: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: #c8d8d2 transparent; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    thead th {
+      position: sticky; top: 0; z-index: 1;
+      padding: 9px 14px;
+      background: #f7fbf9;
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .25px;
+      text-align: right;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; padding-left: 20px; }
+    tbody td { padding: 10px 14px; border-bottom: 1px solid #f0f5f3; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+    tbody td:first-child { text-align: left; padding-left: 20px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+    tbody tr:hover td { background: #fbfefd; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .td-strong { font-weight: 700; color: var(--ink); }
+    .table-empty { padding: 34px 20px; text-align: center; color: var(--muted-2); font-size: 11px; }
+
+    /* ── footer ────────────────────────────────────────────── */
+    .foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 4px 0; color: var(--muted-2); font-size: 9.5px; line-height: 1.5; }
+    .foot a { color: var(--teal); text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+
+    /* ── toast ─────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      left: 50%; bottom: 26px;
+      z-index: 50;
+      max-width: min(92vw, 560px);
+      padding: 11px 15px;
+      border: 1px solid rgba(207, 221, 215, .9);
+      border-radius: 12px;
+      background: rgba(13, 44, 42, .96);
+      color: #effffb;
+      font-size: 11.5px;
+      line-height: 1.45;
+      box-shadow: 0 14px 34px rgba(9, 43, 38, .24);
+      opacity: 0;
+      transform: translate(-50%, 10px);
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.warn { background: #6b4b16; }
+    .toast.error { background: #6d2020; }
+
+    /* ── responsive ────────────────────────────────────────── */
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; grid-template-columns: minmax(0, 1.3fr) minmax(260px, .7fr); align-items: start; }
+      .picker { grid-column: 1; }
+      details.notes { grid-column: 2; }
+    }
+    @media (max-width: 760px) {
+      .app { padding: 0 12px 22px; }
+      .topbar { margin: 12px 0 14px; padding: 15px 16px; border-radius: 17px; align-items: flex-start; }
+      .brand h1 { font-size: 17px; }
+      .brand p { font-size: 10.5px; }
+      .brand-mark { width: 40px; height: 40px; border-radius: 11px; font-size: 12px; }
+      .top-actions { gap: 6px; }
+      .source-pill:nth-of-type(3) { display: none; }
+      .sync-status { min-width: 0; }
+      .sidebar { grid-template-columns: 1fr; }
+      details.notes { grid-column: auto; }
+      .hero { padding: 18px 18px 0; }
+      .hero-top { flex-direction: column; gap: 12px; }
+      .hero-date { width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; }
+      .hero-date strong { margin-top: 0; }
+      .kpis { grid-template-columns: 1fr 1fr; margin: 16px -18px 0; }
+      .kpi { padding: 13px 16px 14px; }
+      .kpi:nth-child(2) { border-right: 0; }
+      .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .kpi > strong { font-size: 20px; }
+      .chart-card { padding: 14px 10px 10px; }
+      .chart-head { padding: 0 5px 4px; }
+      .chart-wrap { min-height: 290px; }
+      .chart-foot { font-size: 9px; flex-direction: column; align-items: flex-start; gap: 3px; }
+      .chart-foot span:last-child { text-align: left; }
+      .table-head { padding: 15px 14px 11px; }
+      thead th:first-child, tbody td:first-child { padding-left: 14px; }
+      thead th, tbody td { padding-left: 10px; padding-right: 10px; }
+      .foot { flex-direction: column; align-items: flex-start; }
+      .hide-sm { display: none; }
+    }
+    @media (max-width: 420px) {
+      .source-pill { display: none; }
+      .segmented button { font-size: 10px; }
+      .kpi > strong { font-size: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">ETF</div>
+      <div>
+        <h1>ETF 份额追踪</h1>
+        <p>每日份额 · 历史沉淀 · 本地优先</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="source-pill"><i></i>上交所</span>
+      <span class="source-pill"><i></i>深交所</span>
+      <span class="source-pill"><i></i>腾讯行情</span>
+      <span id="syncStatus" class="sync-status">准备就绪</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="card picker">
+        <div class="card-head">
+          <span>查询设置</span>
+          <span class="eyebrow">11 只预设</span>
+        </div>
+
+        <label class="field-label" for="fundSelect">选择 ETF</label>
+        <div class="select-wrap">
+          <select id="fundSelect" aria-label="选择 ETF 基金"></select>
+        </div>
+        <div class="manual-row">
+          <input id="codeInput" class="code-input" inputmode="numeric" maxlength="6" placeholder="输入 6 位代码" aria-label="输入 6 位 ETF 代码">
+          <button id="queryBtn" class="btn btn-dark" type="button">查询</button>
+        </div>
+        <p class="hint">可直接输入 6 位代码。沪市通常 5 / 6 开头，深市通常 1 / 3 开头。</p>
+
+        <div style="height:14px"></div>
+        <span class="range-label">时间范围</span>
+        <div class="segmented" id="rangeTabs" role="group" aria-label="时间范围">
+          <button type="button" data-range="30">30 天</button>
+          <button type="button" data-range="90">90 天</button>
+          <button type="button" data-range="365" class="active">1 年</button>
+          <button type="button" data-range="all">全部</button>
+        </div>
+
+        <button id="refreshBtn" class="btn btn-primary" type="button">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="refresh-label">刷新最新份额</span>
+        </button>
+        <button id="exportBtn" class="btn btn-ghost" type="button">导出当前区间 CSV</button>
+
+        <div class="storage-line">
+          <span id="storageDot" class="storage-dot"></span>
+          <span id="storageText">正在读取本地记录…</span>
+        </div>
+
+        <div id="fileHint" class="file-hint" hidden>
+          当前以 <b>file://</b> 打开。若刷新失败，请检查网络。也可在文件目录运行
+          <code class="nowrap">python -m http.server 8000</code> 作为备选；
+          HTTP 下深交所历史接口可能受 CORS 限制。
+        </div>
+      </section>
+
+      <details class="card notes">
+        <summary>数据来源与口径</summary>
+        <div class="notes-body">
+          <p><b>上交所：</b>历史份额内置自上交所 ETF 每日份额接口（<code>COMMON_SSE_ZQPZ_ETFZL_XXPL_ETFGM_SEARCH_L</code>），后续最新快照读取腾讯行情总份额字段，与交易所披露口径一致。</p>
+          <p><b>深交所：</b>直接读取深交所「基金规模」日度接口（<code>CATALOGID=scsj_fund_jjgm</code>），字段单位为万份，页面统一换算为亿份；最新快照同时用腾讯行情校验。</p>
+          <p><b>最新快照：</b>腾讯行情 <code>qt.gtimg.cn/q=sh510300</code>（深市为 <code>sz159915</code>），读取总份额字段，接口支持跨域，适合纯静态页面。</p>
+          <p><b>历史长度：</b>上交所内置近 1 年；深交所官方接口通常只保留近 6 个月。页面会把每次查询结果写入本地，使用越久，历史越长。</p>
+          <p><b>存储：</b>所有查询结果保存在浏览器 <code>localStorage</code>，按基金代码与日期合并；再次打开页面会自动叠加历史，不会覆盖已有记录。</p>
+          <p><b>提示：</b>份额为交易所披露的场内总份额，不含盘中实时申赎；T 日晚间数据可能在次日早间修订。</p>
+        </div>
+      </details>
+    </aside>
+
+    <section class="main">
+      <section class="card hero">
+        <div class="hero-top">
+          <div>
+            <div id="exchangeKicker" class="kicker">上交所 · 510300</div>
+            <h2 id="fundName">沪深300ETF华泰柏瑞</h2>
+            <p id="fundSub" class="hero-sub">正在载入份额数据…</p>
+          </div>
+          <div class="hero-date">
+            <span>最新数据日</span>
+            <strong id="latestDate">--</strong>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi">
+            <span>最新份额</span>
+            <strong id="latestShare">--</strong><small>亿份</small>
+            <span id="latestShareRaw" class="sub">--</span>
+          </div>
+          <div class="kpi">
+            <span>较前一交易日</span>
+            <strong id="dayChange">--</strong><small>亿份</small>
+            <span id="dayChangePct" class="sub">--</span>
+          </div>
+          <div class="kpi">
+            <span>区间变化</span>
+            <strong id="rangeChange">--</strong><small>%</small>
+            <span id="rangeChangeAbs" class="sub">--</span>
+          </div>
+          <div class="kpi">
+            <span>数据点</span>
+            <strong id="pointCount">--</strong><small>个交易日</small>
+            <span id="pointRange" class="sub">--</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>份额走势</h3>
+            <p id="chartRangeText">--</p>
+          </div>
+          <div class="chart-legend"><span class="legend-line"></span>单位：亿份</div>
+        </div>
+        <div id="chartWrap" class="chart-wrap">
+          <svg id="chart" role="img" aria-label="ETF 份额历史折线图"></svg>
+          <div id="chartEmpty" class="chart-empty" hidden>
+            <strong>暂无可绘制的数据</strong>
+            <span>点击「刷新最新份额」获取第一条记录</span>
+          </div>
+          <div id="tooltip" class="chart-tooltip" aria-hidden="true"></div>
+        </div>
+        <div class="chart-foot">
+          <span>折线按交易日排列；悬停或触摸查看单日数据。</span>
+          <span id="seedNote">—</span>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-head">
+          <div>
+            <h3>历史数据</h3>
+            <p>当前时间范围内的全部记录，按日期倒序</p>
+          </div>
+          <span id="tableCount" class="count-badge">0 条</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>份额（亿份）</th>
+                <th class="hide-sm">日变动（亿份）</th>
+                <th class="hide-sm">变动率</th>
+                <th class="hide-sm">份额（份）</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="5" class="table-empty">正在载入…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>数据仅供研究参考，不构成投资建议。份额单位：亿份（1 亿份 = 100,000,000 份）。</span>
+    <span id="footRight">本地优先 · 无后端依赖</span>
+  </footer>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script id="seed-data" type="application/json">{"generatedAt":"2026-10-26T16:25:08+08:00","source":"上海证券交易所 ETF 每日份额 / 深圳证券交易所基金规模","funds":{"510310":{"name":"沪深300ETF易方达","exchange":"SSE","points":[["2025-10-27",66835544000],["2025-10-28",66857144000],["2025-10-29",66884144000],["2025-10-30",66851744000],["2025-10-31",66971444000],["2025-11-03",66940844000],["2025-11-04",66732044000],["2025-11-05",66683444000],["2025-11-06",66680744000],["2025-11-07",66665444000],["2025-11-10",66653744000],["2025-11-11",66617744000],["2025-11-12",66568244000],["2025-11-13",66483644000],["2025-11-14",66446744000],["2025-11-17",66436844000],["2025-11-18",66453044000],["2025-11-19",66426044000],["2025-11-20",66363044000],["2025-11-21",66365744000],["2025-11-24",66480044000],["2025-11-25",66440444000],["2025-11-26",66364844000],["2025-11-27",66336044000],["2025-11-28",66352244000],["2025-12-01",66312644000],["2025-12-02",66297344000],["2025-12-03",66290144000],["2025-12-04",66321644000],["2025-12-05",66372944000],["2025-12-08",66416144000],["2025-12-09",66331544000],["2025-12-10",66280244000],["2025-12-11",66278444000],["2025-12-12",66362144000],["2025-12-15",66342344000],["2025-12-16",66351344000],["2025-12-17",66426044000],["2025-12-18",66426944000],["2025-12-19",66398144000],["2025-12-22",66207344000],["2025-12-23",66106544000],["2025-12-24",66130844000],["2025-12-25",66116444000],["2025-12-26",66153344000],["2025-12-29",66018344000],["2025-12-30",66002144000],["2025-12-31",65853644000],["2026-01-05",65969744000],["2026-01-06",65983244000],["2026-01-07",65926544000],["2026-01-08",65921144000],["2026-01-09",65934644000],["2026-01-12",65813144000],["2026-01-13",65710544000],["2026-01-14",65505344000],["2026-01-15",64113944000],["2026-01-16",62414744000],["2026-01-19",61218644000],["2026-01-20",59718344000],["2026-01-21",56698844000],["2026-01-22",53355344000],["2026-01-23",48859844000],["2026-01-26",43849544000],["2026-01-27",41232344000],["2026-01-28",34965644000],["2026-01-29",33000944000],["2026-01-30",32475344000],["2026-02-02",32368244000],["2026-02-03",32525744000],["2026-02-04",32446544000],["2026-02-05",32514044000],["2026-02-06",32568944000],["2026-02-09",32569844000],["2026-02-10",32469044000],["2026-02-11",32410544000],["2026-02-12",32373644000],["2026-02-13",32201744000],["2026-02-24",32180144000],["2026-02-25",32181044000],["2026-02-26",31995644000],["2026-02-27",31969544000],["2026-03-02",31801244000],["2026-03-03",31669844000],["2026-03-04",31752644000],["2026-03-05",31769744000],["2026-03-06",31785944000],["2026-03-09",31785944000],["2026-03-10",31729244000],["2026-03-11",31654544000],["2026-03-12",31608644000],["2026-03-13",31619444000],["2026-03-16",31651844000],["2026-03-17",31629344000],["2026-03-18",31632944000],["2026-03-19",31702244000],["2026-03-20",31705844000],["2026-03-23",31870544000],["2026-03-24",31875044000],["2026-03-25",31836344000],["2026-03-26",31799444000],["2026-03-27",31839944000],["2026-03-30",31797644000],["2026-03-31",31699544000],["2026-04-01",31673444000],["2026-04-02",31633844000],["2026-04-03",31637444000],["2026-04-07",31640144000],["2026-04-08",31658144000],["2026-04-09",31565444000],["2026-04-10",31350344000],["2026-04-13",31285544000],["2026-04-14",31319744000],["2026-04-15",31380944000],["2026-04-16",31396244000],["2026-04-17",31334144000],["2026-04-20",31293644000],["2026-04-21",31157744000],["2026-04-22",31055144000],["2026-04-23",30822944000],["2026-04-24",30807644000],["2026-04-27",30598844000],["2026-04-28",30415244000],["2026-04-29",30152444000],["2026-04-30",29693444000],["2026-05-06",29198444000],["2026-05-07",28725944000],["2026-05-08",28219244000],["2026-05-11",27433544000],["2026-05-12",26773844000],["2026-05-13",26267144000],["2026-05-14",25810844000],["2026-05-15",25719044000],["2026-05-18",25583144000],["2026-05-19",25185344000],["2026-05-20",24927044000],["2026-05-21",24446444000],["2026-05-22",23973944000],["2026-05-25",22965944000],["2026-05-26",22320644000],["2026-05-27",22120844000],["2026-05-28",22100144000],["2026-05-29",22109144000],["2026-06-01",22122644000],["2026-06-02",22100144000],["2026-06-03",22049744000],["2026-06-04",21899444000],["2026-06-05",21995744000],["2026-06-08",22299944000],["2026-06-09",22268444000],["2026-06-10",22306244000],["2026-06-11",22319744000],["2026-06-12",22206344000],["2026-06-15",21475544000],["2026-06-16",20565644000],["2026-06-17",19510844000],["2026-06-18",19000544000],["2026-06-22",18380444000],["2026-06-23",17021444000],["2026-06-24",15741644000],["2026-06-25",13868744000],["2026-06-26",13886744000],["2026-06-29",13210844000],["2026-06-30",11600744000],["2026-07-01",11335244000],["2026-07-02",10822244000],["2026-07-03",9175244000],["2026-07-06",9121244000],["2026-07-07",9129344000],["2026-07-08",9169844000],["2026-07-09",9177944000],["2026-07-10",9177044000],["2026-07-13",9428144000],["2026-07-14",9660344000],["2026-07-15",9753944000],["2026-07-16",9969944000],["2026-07-17",10621544000],["2026-07-20",11019344000],["2026-07-21",11144444000],["2026-07-22",11163344000],["2026-07-23",11184944000],["2026-07-24",11281244000],["2026-07-27",11356844000],["2026-07-28",11460344000],["2026-07-29",11574644000],["2026-07-30",11658344000],["2026-07-31",11662844000],["2026-08-03",11796044000],["2026-08-04",11716844000],["2026-08-05",11607944000],["2026-08-06",11631344000],["2026-08-07",11559344000],["2026-08-10",11526044000],["2026-08-11",11519744000],["2026-08-12",11436044000],["2026-08-13",11375744000],["2026-08-14",11373944000],["2026-08-17",11311844000],["2026-08-18",11228144000],["2026-08-19",11433344000],["2026-08-20",11522444000],["2026-08-21",11458544000],["2026-08-24",11505344000],["2026-08-25",11563844000],["2026-08-26",11572844000],["2026-08-27",11465744000],["2026-08-28",11430644000],["2026-08-31",11469344000],["2026-09-01",11294744000],["2026-09-02",11290244000],["2026-09-03",11296544000],["2026-09-04",11353244000],["2026-09-07",11464844000],["2026-09-08",11396444000],["2026-09-09",11384744000],["2026-09-10",11377544000],["2026-09-11",11347844000],["2026-09-14",11373944000],["2026-09-15",11353244000],["2026-09-16",11342444000],["2026-09-17",11344244000],["2026-09-18",11344244000],["2026-09-21",11376644000],["2026-09-22",11456744000],["2026-09-23",11806844000],["2026-09-24",11788844000],["2026-09-28",11813144000],["2026-09-29",11867144000],["2026-09-30",11987744000],["2026-10-08",11995844000],["2026-10-09",12095744000],["2026-10-12",12113744000],["2026-10-13",12162344000],["2026-10-14",12156944000],["2026-10-15",16726244000],["2026-10-16",16879244000],["2026-10-19",16948544000],["2026-10-20",17028644000],["2026-10-21",17062844000],["2026-10-22",17115044000],["2026-10-23",18359744000]]},"159915":{"name":"创业板ETF易方达","exchange":"SZSE","points":[["2026-05-06",12143454900],["2026-05-07",12066454900],["2026-05-08",12154454900],["2026-05-11",12067454900],["2026-05-12",11971454900],["2026-05-13",12052454900],["2026-05-14",12156454900],["2026-05-15",11993454900],["2026-05-18",11809454900],["2026-05-19",12007454900],["2026-05-20",11958454900],["2026-05-21",11760454900],["2026-05-22",11413454900],["2026-05-25",11126454900],["2026-05-26",10945454900],["2026-05-27",10569454900],["2026-05-28",10515454900],["2026-05-29",10559454900],["2026-06-01",10604454900],["2026-06-02",10234454900],["2026-06-03",10071454900],["2026-06-04",10331454900],["2026-06-05",10667454900],["2026-06-08",10826454900],["2026-06-09",10410454900],["2026-06-10",10589454900],["2026-06-11",10689454900],["2026-06-12",10642454900],["2026-06-15",10505454900],["2026-06-16",10405454900],["2026-06-17",10523454900],["2026-06-18",10522454900],["2026-06-22",10817454900],["2026-06-23",11363454900],["2026-06-24",11143454900],["2026-06-25",10990454900],["2026-06-26",11029454900],["2026-06-29",10959454900],["2026-06-30",10746454900],["2026-07-01",10694454900],["2026-07-02",11165454900],["2026-07-03",11042454900],["2026-07-06",11143454900],["2026-07-07",11533454900],["2026-07-08",11746454900],["2026-07-09",11800454900],["2026-07-10",11801454900],["2026-07-13",12338454900],["2026-07-14",12469454900],["2026-07-15",12456454900],["2026-07-16",13024454900],["2026-07-17",14920454900],["2026-07-20",17639454900],["2026-07-21",17043454900],["2026-07-22",16626454900],["2026-07-23",16619454900],["2026-07-24",16653454900],["2026-07-27",16973454900],["2026-07-28",18974454900],["2026-07-29",20048454900],["2026-07-30",21996454900],["2026-07-31",20397454900],["2026-08-03",20359454900],["2026-08-04",19404454900],["2026-08-05",18978454900],["2026-08-06",18768454900],["2026-08-07",18339454900],["2026-08-10",18574454900],["2026-08-11",18167454900],["2026-08-12",17981454900],["2026-08-13",17660454900],["2026-08-14",17460454900],["2026-08-17",17114454900],["2026-08-18",17191454900],["2026-08-19",18410454900],["2026-08-20",18160454900],["2026-08-21",17745454900],["2026-08-24",18316454900],["2026-08-25",19004454900],["2026-08-26",18722454900],["2026-08-27",18791454900],["2026-08-28",18762454900],["2026-08-31",18916454900],["2026-09-01",19044454900],["2026-09-02",19480454900],["2026-09-03",19828454900],["2026-09-04",20089454900],["2026-09-07",19291454900],["2026-09-08",19364454900],["2026-09-09",19356454900],["2026-09-10",19448454900],["2026-09-11",19682454900],["2026-09-14",19778454900],["2026-09-15",20305454900],["2026-09-16",20283454900],["2026-09-17",19995454900],["2026-09-18",19859454900],["2026-09-21",19630454900],["2026-09-22",19627454900],["2026-09-23",19648454900],["2026-09-24",19963454900],["2026-09-28",20864454900],["2026-09-29",20730454900],["2026-09-30",20609454900],["2026-10-08",21308454900],["2026-10-09",22022454900],["2026-10-12",22226454900],["2026-10-13",22959454900],["2026-10-14",23497454900],["2026-10-15",25470454900],["2026-10-16",25936454900],["2026-10-19",26736454900],["2026-10-20",27343454900],["2026-10-21",29204454900],["2026-10-22",31305454900],["2026-10-23",33757454900]]},"588000":{"name":"科创50ETF华夏","exchange":"SSE","points":[["2025-10-27",48958168200],["2025-10-28",48904168200],["2025-10-29",49097668200],["2025-10-30",49174168200],["2025-10-31",50272168200],["2025-11-03",50497168200],["2025-11-04",49975168200],["2025-11-05",50060668200],["2025-11-06",49003168200],["2025-11-07",49012168200],["2025-11-10",49336168200],["2025-11-11",49466668200],["2025-11-12",50357668200],["2025-11-13",50227168200],["2025-11-14",50735668200],["2025-11-17",50821168200],["2025-11-18",50614168200],["2025-11-19",50960668200],["2025-11-20",51500668200],["2025-11-21",53264668200],["2025-11-24",53647168200],["2025-11-25",53210668200],["2025-11-26",52090168200],["2025-11-27",51725668200],["2025-11-28",51482668200],["2025-12-01",51532168200],["2025-12-02",51550168200],["2025-12-03",51599668200],["2025-12-04",51640168200],["2025-12-05",52418668200],["2025-12-08",52976668200],["2025-12-09",52873168200],["2025-12-10",53084668200],["2025-12-11",53444668200],["2025-12-12",53026168200],["2025-12-15",53534668200],["2025-12-16",54164668200],["2025-12-17",53669668200],["2025-12-18",53989168200],["2025-12-19",54317668200],["2025-12-22",54047668200],["2025-12-23",53615668200],["2025-12-24",53359168200],["2025-12-25",53849668200],["2025-12-26",54349168200],["2025-12-29",53705668200],["2025-12-30",53089168200],["2025-12-31",53710168200],["2026-01-05",53165668200],["2026-01-06",54196168200],["2026-01-07",53516668200],["2026-01-08",53296168200],["2026-01-09",53498668200],["2026-01-12",53386168200],["2026-01-13",53786668200],["2026-01-14",52940668200],["2026-01-15",53075668200],["2026-01-16",53116168200],["2026-01-19",53098168200],["2026-01-20",52211668200],["2026-01-21",50618668200],["2026-01-22",50528668200],["2026-01-23",50965168200],["2026-01-26",50771668200],["2026-01-27",50281168200],["2026-01-28",49925668200],["2026-01-29",50704168200],["2026-01-30",50393668200],["2026-02-02",50704168200],["2026-02-03",51199168200],["2026-02-04",51797668200],["2026-02-05",52112668200],["2026-02-06",52382668200],["2026-02-09",51865168200],["2026-02-10",51347668200],["2026-02-11",51451168200],["2026-02-12",50906668200],["2026-02-13",50461168200],["2026-02-24",50407168200],["2026-02-25",50074168200],["2026-02-26",49426168200],["2026-02-27",49088668200],["2026-03-02",48845668200],["2026-03-03",50249668200],["2026-03-04",50060668200],["2026-03-05",48995668200],["2026-03-06",48992668200],["2026-03-09",49373668200],["2026-03-10",48734668200],["2026-03-11",48845668200],["2026-03-12",49250668200],["2026-03-13",49385668200],["2026-03-16",49550668200],["2026-03-17",49595668200],["2026-03-18",49274668200],["2026-03-19",50306668200],["2026-03-20",50867668200],["2026-03-23",51794668200],["2026-03-24",52016668200],["2026-03-25",51011668200],["2026-03-26",51407668200],["2026-03-27",51407668200],["2026-03-30",51443668200],["2026-03-31",51788668200],["2026-04-01",50594668200],["2026-04-02",51566668200],["2026-04-03",51794668200],["2026-04-07",51182668200],["2026-04-08",50969668200],["2026-04-09",50831668200],["2026-04-10",50681668200],["2026-04-13",49571668200],["2026-04-14",48860668200],["2026-04-15",48017668200],["2026-04-16",48038668200],["2026-04-17",47828668200],["2026-04-20",47138668200],["2026-04-21",47441668200],["2026-04-22",46745668200],["2026-04-23",46424668200],["2026-04-24",45758668200],["2026-04-27",44786668200],["2026-04-28",44678668200],["2026-04-29",44858668200],["2026-04-30",41927668200],["2026-05-06",40256668200],["2026-05-07",39842668200],["2026-05-08",40025668200],["2026-05-11",38990668200],["2026-05-12",38474668200],["2026-05-13",38207668200],["2026-05-14",37838668200],["2026-05-15",37259668200],["2026-05-18",36290668200],["2026-05-19",35888668200],["2026-05-20",35144668200],["2026-05-21",34898668200],["2026-05-22",34490668200],["2026-05-25",33230668200],["2026-05-26",33602668200],["2026-05-27",33704668200],["2026-05-28",33035668200],["2026-05-29",33878668200],["2026-06-01",34526668200],["2026-06-02",34397668200],["2026-06-03",33317668200],["2026-06-04",32978668200],["2026-06-05",33464668200],["2026-06-08",34412668200],["2026-06-09",33503668200],["2026-06-10",32975668200],["2026-06-11",33059668200],["2026-06-12",33227668200],["2026-06-15",32876668200],["2026-06-16",33095668200],["2026-06-17",32072668200],["2026-06-18",31235668200],["2026-06-22",31604668200],["2026-06-23",31661668200],["2026-06-24",31202668200],["2026-06-25",31040668200],["2026-06-26",30881668200],["2026-06-29",29804668200],["2026-06-30",29831668200],["2026-07-01",29963668200],["2026-07-02",31130668200],["2026-07-03",31190668200],["2026-07-06",31148668200],["2026-07-07",30917668200],["2026-07-08",30800668200],["2026-07-09",31241668200],["2026-07-10",31733668200],["2026-07-13",32681668200],["2026-07-14",33176668200],["2026-07-15",33857668200],["2026-07-16",34646668200],["2026-07-17",37424668200],["2026-07-20",45053668200],["2026-07-21",45512668200],["2026-07-22",44360668200],["2026-07-23",46145668200],["2026-07-24",45560668200],["2026-07-27",46094668200],["2026-07-28",48173668200],["2026-07-29",50474668200],["2026-07-30",53900668200],["2026-07-31",51434668200],["2026-08-03",53840668200],["2026-08-04",52859668200],["2026-08-05",50768668200],["2026-08-06",50288668200],["2026-08-07",49250668200],["2026-08-10",49574668200],["2026-08-11",49364668200],["2026-08-12",48722668200],["2026-08-13",48332668200],["2026-08-14",48860668200],["2026-08-17",47030668200],["2026-08-18",47138668200],["2026-08-19",49604668200],["2026-08-20",49868668200],["2026-08-21",49766668200],["2026-08-24",51035668200],["2026-08-25",51773668200],["2026-08-26",51002668200],["2026-08-27",50045668200],["2026-08-28",50336668200],["2026-08-31",50540668200],["2026-09-01",51146668200],["2026-09-02",51419668200],["2026-09-03",52256668200],["2026-09-04",54095668200],["2026-09-07",53534668200],["2026-09-08",53858668200],["2026-09-09",54245668200],["2026-09-10",54758668200],["2026-09-11",56072668200],["2026-09-14",56591668200],["2026-09-15",55643668200],["2026-09-16",55382668200],["2026-09-17",55592668200],["2026-09-18",54998668200],["2026-09-21",55277668200],["2026-09-22",54374668200],["2026-09-23",54290668200],["2026-09-24",55052668200],["2026-09-28",56375668200],["2026-09-29",56555668200],["2026-09-30",58238668200],["2026-10-08",60542668200],["2026-10-09",62978668200],["2026-10-12",63233668200],["2026-10-13",63962668200],["2026-10-14",64958668200],["2026-10-15",69572668200],["2026-10-16",70196668200],["2026-10-19",71591668200],["2026-10-20",73718668200],["2026-10-21",74765668200],["2026-10-22",79532668200],["2026-10-23",82292668200]]},"510300":{"name":"沪深300ETF华泰柏瑞","exchange":"SSE","points":[["2025-10-27",89155387700],["2025-10-28",89464087700],["2025-10-29",89587387700],["2025-10-30",89444287700],["2025-10-31",90507187700],["2025-11-03",90368587700],["2025-11-04",89707087700],["2025-11-05",89555887700],["2025-11-06",89365987700],["2025-11-07",89201287700],["2025-11-10",89202187700],["2025-11-11",89205787700],["2025-11-12",89221987700],["2025-11-13",89137387700],["2025-11-14",89258887700],["2025-11-17",89610787700],["2025-11-18",89725987700],["2025-11-19",89469487700],["2025-11-20",89383087700],["2025-11-21",90225487700],["2025-11-24",91029187700],["2025-11-25",90810487700],["2025-11-26",90269587700],["2025-11-27",90182287700],["2025-11-28",90122887700],["2025-12-01",89819587700],["2025-12-02",89761087700],["2025-12-03",89817787700],["2025-12-04",89906887700],["2025-12-05",90042787700],["2025-12-08",90237187700],["2025-12-09",89907787700],["2025-12-10",89701687700],["2025-12-11",89500987700],["2025-12-12",90008587700],["2025-12-15",89779987700],["2025-12-16",89722387700],["2025-12-17",90160687700],["2025-12-18",90248887700],["2025-12-19",90034687700],["2025-12-22",89542387700],["2025-12-23",89040187700],["2025-12-24",89140987700],["2025-12-25",89151787700],["2025-12-26",89312887700],["2025-12-29",89022187700],["2025-12-30",89028487700],["2025-12-31",88829587700],["2026-01-05",89058187700],["2026-01-06",89344387700],["2026-01-07",89029387700],["2026-01-08",89142787700],["2026-01-09",89509087700],["2026-01-12",89154487700],["2026-01-13",88819687700],["2026-01-14",88242787700],["2026-01-15",84100987700],["2026-01-16",79760287700],["2026-01-19",77863087700],["2026-01-20",75533887700],["2026-01-21",71977987700],["2026-01-22",68534587700],["2026-01-23",64415287700],["2026-01-26",60517387700],["2026-01-27",57532987700],["2026-01-28",51504787700],["2026-01-29",49260187700],["2026-01-30",48687787700],["2026-02-02",47506987700],["2026-02-03",47543887700],["2026-02-04",46987687700],["2026-02-05",47227987700],["2026-02-06",47461087700],["2026-02-09",47458387700],["2026-02-10",47128987700],["2026-02-11",47025487700],["2026-02-12",46940887700],["2026-02-13",46123687700],["2026-02-24",45907687700],["2026-02-25",45979687700],["2026-02-26",45596287700],["2026-02-27",45612487700],["2026-03-02",44765587700],["2026-03-03",44573887700],["2026-03-04",44960887700],["2026-03-05",44612587700],["2026-03-06",44606287700],["2026-03-09",44621587700],["2026-03-10",44522587700],["2026-03-11",44094187700],["2026-03-12",44007787700],["2026-03-13",43985287700],["2026-03-16",44097787700],["2026-03-17",44332687700],["2026-03-18",44575687700],["2026-03-19",44822287700],["2026-03-20",44918587700],["2026-03-23",45749287700],["2026-03-24",45670987700],["2026-03-25",45231787700],["2026-03-26",45151687700],["2026-03-27",45160687700],["2026-03-30",44913187700],["2026-03-31",44828587700],["2026-04-01",44812387700],["2026-04-02",44718787700],["2026-04-03",44869087700],["2026-04-07",45052687700],["2026-04-08",45165187700],["2026-04-09",44763787700],["2026-04-10",44077087700],["2026-04-13",43858387700],["2026-04-14",43806187700],["2026-04-15",43920487700],["2026-04-16",43684687700],["2026-04-17",43258987700],["2026-04-20",42820687700],["2026-04-21",42441787700],["2026-04-22",41816287700],["2026-04-23",41118787700],["2026-04-24",40922587700],["2026-04-27",40362787700],["2026-04-28",39860587700],["2026-04-29",39371887700],["2026-04-30",38204587700],["2026-05-06",37932787700],["2026-05-07",36156187700],["2026-05-08",35269687700],["2026-05-11",33945787700],["2026-05-12",33371587700],["2026-05-13",32727187700],["2026-05-14",32091787700],["2026-05-15",32162887700],["2026-05-18",32182687700],["2026-05-19",31662487700],["2026-05-20",31027087700],["2026-05-21",30494287700],["2026-05-22",29795887700],["2026-05-25",28458487700],["2026-05-26",28028287700],["2026-05-27",27896887700],["2026-05-28",27968887700],["2026-05-29",27956287700],["2026-06-01",28199287700],["2026-06-02",28241587700],["2026-06-03",28047187700],["2026-06-04",27859987700],["2026-06-05",27904987700],["2026-06-08",28481887700],["2026-06-09",28331587700],["2026-06-10",28514287700],["2026-06-11",28730287700],["2026-06-12",28624087700],["2026-06-15",28382887700],["2026-06-16",27970687700],["2026-06-17",27082387700],["2026-06-18",26527087700],["2026-06-22",26384887700],["2026-06-23",24676687700],["2026-06-24",22886587700],["2026-06-25",20744587700],["2026-06-26",20800387700],["2026-06-29",19936387700],["2026-06-30",18914887700],["2026-07-01",18395587700],["2026-07-02",18532387700],["2026-07-03",17069887700],["2026-07-06",16821487700],["2026-07-07",17094187700],["2026-07-08",17203087700],["2026-07-09",17214787700],["2026-07-10",17157187700],["2026-07-13",18320887700],["2026-07-14",18481987700],["2026-07-15",18395587700],["2026-07-16",19701487700],["2026-07-17",21716587700],["2026-07-20",24421987700],["2026-07-21",24357187700],["2026-07-22",24044887700],["2026-07-23",24026887700],["2026-07-24",24380587700],["2026-07-27",24641587700],["2026-07-28",25334587700],["2026-07-29",25947487700],["2026-07-30",26483887700],["2026-07-31",26466787700],["2026-08-03",27058087700],["2026-08-04",26530687700],["2026-08-05",25937587700],["2026-08-06",25705387700],["2026-08-07",25128487700],["2026-08-10",24861187700],["2026-08-11",24824287700],["2026-08-12",24168187700],["2026-08-13",23678587700],["2026-08-14",23501287700],["2026-08-17",23044087700],["2026-08-18",22693987700],["2026-08-19",23858587700],["2026-08-20",23743387700],["2026-08-21",23481487700],["2026-08-24",23809087700],["2026-08-25",24052987700],["2026-08-26",23853187700],["2026-08-27",23578687700],["2026-08-28",23295187700],["2026-08-31",23503987700],["2026-09-01",22999987700],["2026-09-02",22956787700],["2026-09-03",23120587700],["2026-09-04",23377087700],["2026-09-07",23648887700],["2026-09-08",23468887700],["2026-09-09",23185387700],["2026-09-10",23190787700],["2026-09-11",23398687700],["2026-09-14",23403187700],["2026-09-15",23542687700],["2026-09-16",23794687700],["2026-09-17",23701087700],["2026-09-18",23659687700],["2026-09-21",23713687700],["2026-09-22",23737987700],["2026-09-23",24005287700],["2026-09-24",23904487700],["2026-09-28",24178087700],["2026-09-29",24164587700],["2026-09-30",24119587700],["2026-10-08",24063787700],["2026-10-09",24392287700],["2026-10-12",24529987700],["2026-10-13",24897187700],["2026-10-14",24690187700],["2026-10-15",25484887700],["2026-10-16",28552987700],["2026-10-19",29195587700],["2026-10-20",29400787700],["2026-10-21",30199087700],["2026-10-22",32729887700],["2026-10-23",35242687700]]},"510330":{"name":"沪深300ETF华夏","exchange":"SSE","points":[["2025-10-27",47451849800],["2025-10-28",47466249800],["2025-10-29",47480649800],["2025-10-30",47469849800],["2025-10-31",47507649800],["2025-11-03",47515749800],["2025-11-04",47450049800],["2025-11-05",47459949800],["2025-11-06",47421249800],["2025-11-07",47387949800],["2025-11-10",47374449800],["2025-11-11",47360949800],["2025-11-12",47340249800],["2025-11-13",47310549800],["2025-11-14",47304249800],["2025-11-17",47312349800],["2025-11-18",47301549800],["2025-11-19",47278149800],["2025-11-20",47234049800],["2025-11-21",47297049800],["2025-11-24",47369949800],["2025-11-25",47368149800],["2025-11-26",47399649800],["2025-11-27",47407749800],["2025-11-28",47408649800],["2025-12-01",47408649800],["2025-12-02",47433849800],["2025-12-03",47452749800],["2025-12-04",47475249800],["2025-12-05",47486049800],["2025-12-08",47498649800],["2025-12-09",47482449800],["2025-12-10",47471649800],["2025-12-11",47472549800],["2025-12-12",47530149800],["2025-12-15",47530149800],["2025-12-16",47536449800],["2025-12-17",47568849800],["2025-12-18",47575149800],["2025-12-19",47569749800],["2025-12-22",47468949800],["2025-12-23",47423049800],["2025-12-24",47418549800],["2025-12-25",47436549800],["2025-12-26",47482449800],["2025-12-29",47449149800],["2025-12-30",47459949800],["2025-12-31",47424849800],["2026-01-05",47459049800],["2026-01-06",47467149800],["2026-01-07",47406849800],["2026-01-08",47441049800],["2026-01-09",47475249800],["2026-01-12",47424849800],["2026-01-13",47387049800],["2026-01-14",47266449800],["2026-01-15",46473549800],["2026-01-16",42010449800],["2026-01-19",40457049800],["2026-01-20",39139449800],["2026-01-21",36203649800],["2026-01-22",34380249800],["2026-01-23",30572349800],["2026-01-26",27559149800],["2026-01-27",26060649800],["2026-01-28",20989149800],["2026-01-29",19660749800],["2026-01-30",19430349800],["2026-02-02",19226949800],["2026-02-03",19350249800],["2026-02-04",19331349800],["2026-02-05",19344849800],["2026-02-06",19351149800],["2026-02-09",19358349800],["2026-02-10",19349349800],["2026-02-11",19350249800],["2026-02-12",19335849800],["2026-02-13",19284549800],["2026-02-24",19285449800],["2026-02-25",19309749800],["2026-02-26",19253949800],["2026-02-27",19259349800],["2026-03-02",19185549800],["2026-03-03",19187349800],["2026-03-04",19205349800],["2026-03-05",19204449800],["2026-03-06",19211649800],["2026-03-09",19190949800],["2026-03-10",19198149800],["2026-03-11",19103649800],["2026-03-12",19082049800],["2026-03-13",19117149800],["2026-03-16",19126149800],["2026-03-17",19154949800],["2026-03-18",19167549800],["2026-03-19",19240449800],["2026-03-20",19294449800],["2026-03-23",19379049800],["2026-03-24",19483449800],["2026-03-25",19486149800],["2026-03-26",19494249800],["2026-03-27",19496949800],["2026-03-30",19486149800],["2026-03-31",19437549800],["2026-04-01",19415049800],["2026-04-02",19404249800],["2026-04-03",19410549800],["2026-04-07",19420449800],["2026-04-08",19425849800],["2026-04-09",19344849800],["2026-04-10",19261149800],["2026-04-13",19249449800],["2026-04-14",19254849800],["2026-04-15",19252149800],["2026-04-16",19236849800],["2026-04-17",19227849800],["2026-04-20",19212549800],["2026-04-21",19165749800],["2026-04-22",19136949800],["2026-04-23",19059549800],["2026-04-24",19010049800],["2026-04-27",18874149800],["2026-04-28",18810249800],["2026-04-29",18748149800],["2026-04-30",18551949800],["2026-05-06",18212649800],["2026-05-07",17889549800],["2026-05-08",17636649800],["2026-05-11",17192049800],["2026-05-12",16845549800],["2026-05-13",16756449800],["2026-05-14",16701549800],["2026-05-15",16643049800],["2026-05-18",16657449800],["2026-05-19",16525149800],["2026-05-20",16390149800],["2026-05-21",16056249800],["2026-05-22",15775449800],["2026-05-25",14652249800],["2026-05-26",14388549800],["2026-05-27",14213049800],["2026-05-28",14228349800],["2026-05-29",14217549800],["2026-06-01",14229249800],["2026-06-02",14249049800],["2026-06-03",14172549800],["2026-06-04",14157249800],["2026-06-05",14173449800],["2026-06-08",14347149800],["2026-06-09",14315649800],["2026-06-10",14328249800],["2026-06-11",14380449800],["2026-06-12",14265249800],["2026-06-15",13777449800],["2026-06-16",13450749800],["2026-06-17",13170849800],["2026-06-18",12889149800],["2026-06-22",12753249800],["2026-06-23",11727249800],["2026-06-24",10534749800],["2026-06-25",8762649800],["2026-06-26",8754549800],["2026-06-29",8274849800],["2026-06-30",7489149800],["2026-07-01",7503549800],["2026-07-02",7554849800],["2026-07-03",7548549800],["2026-07-06",7520649800],["2026-07-07",7514349800],["2026-07-08",7534149800],["2026-07-09",7550349800],["2026-07-10",7578249800],["2026-07-13",7710549800],["2026-07-14",7749249800],["2026-07-15",7765449800],["2026-07-16",7889649800],["2026-07-17",8252349800],["2026-07-20",8386449800],["2026-07-21",8402649800],["2026-07-22",8380149800],["2026-07-23",8468349800],["2026-07-24",8532249800],["2026-07-27",8594349800],["2026-07-28",8615949800],["2026-07-29",8649249800],["2026-07-30",8712249800],["2026-07-31",8714049800],["2026-08-03",8785149800],["2026-08-04",8762649800],["2026-08-05",8718549800],["2026-08-06",8737449800],["2026-08-07",8726649800],["2026-08-10",8723049800],["2026-08-11",8715849800],["2026-08-12",8658249800],["2026-08-13",8599749800],["2026-08-14",8582649800],["2026-08-17",8537649800],["2026-08-18",8380149800],["2026-08-19",8501649800],["2026-08-20",8501649800],["2026-08-21",8378349800],["2026-08-24",8416149800],["2026-08-25",8437749800],["2026-08-26",8428749800],["2026-08-27",8399949800],["2026-08-28",8392749800],["2026-08-31",8407149800],["2026-09-01",8375649800],["2026-09-02",8352249800],["2026-09-03",8355849800],["2026-09-04",8384649800],["2026-09-07",8435949800],["2026-09-08",8390049800],["2026-09-09",8372049800],["2026-09-10",8362149800],["2026-09-11",8340549800],["2026-09-14",8351349800],["2026-09-15",8339649800],["2026-09-16",8327049800],["2026-09-17",8310849800],["2026-09-18",8317149800],["2026-09-21",8318949800],["2026-09-22",8428749800],["2026-09-23",8578149800],["2026-09-24",8518749800],["2026-09-28",8512449800],["2026-09-29",8508849800],["2026-09-30",8507049800],["2026-10-08",8516049800],["2026-10-09",8549349800],["2026-10-12",8543049800],["2026-10-13",8574549800],["2026-10-14",8575449800],["2026-10-15",8624049800],["2026-10-16",8688849800],["2026-10-19",8719449800],["2026-10-20",9623949800],["2026-10-21",9702249800],["2026-10-22",10532949800],["2026-10-23",11908149800]]},"510500":{"name":"中证500ETF南方","exchange":"SSE","points":[["2025-10-27",18238968600],["2025-10-28",18258568600],["2025-10-29",18331768600],["2025-10-30",18301768600],["2025-10-31",18399368600],["2025-11-03",18328568600],["2025-11-04",18140968600],["2025-11-05",18140568600],["2025-11-06",18158168600],["2025-11-07",18130168600],["2025-11-10",18120968600],["2025-11-11",18098968600],["2025-11-12",18135368600],["2025-11-13",18172968600],["2025-11-14",18190968600],["2025-11-17",18244968600],["2025-11-18",18278168600],["2025-11-19",18424568600],["2025-11-20",18530168600],["2025-11-21",19004168600],["2025-11-24",19132968600],["2025-11-25",18711768600],["2025-11-26",18442568600],["2025-11-27",18364168600],["2025-11-28",18405368600],["2025-12-01",18441368600],["2025-12-02",18360968600],["2025-12-03",18338168600],["2025-12-04",18368968600],["2025-12-05",18548968600],["2025-12-08",18552968600],["2025-12-09",18471768600],["2025-12-10",18271768600],["2025-12-11",18256168600],["2025-12-12",18540968600],["2025-12-15",18533768600],["2025-12-16",18523768600],["2025-12-17",18618168600],["2025-12-18",18622168600],["2025-12-19",18733768600],["2025-12-22",18650968600],["2025-12-23",18628968600],["2025-12-24",18756168600],["2025-12-25",18863368600],["2025-12-26",19174168600],["2025-12-29",19032968600],["2025-12-30",19099768600],["2025-12-31",19064568600],["2026-01-05",19431768600],["2026-01-06",19559368600],["2026-01-07",19491768600],["2026-01-08",19358568600],["2026-01-09",19521768600],["2026-01-12",19552968600],["2026-01-13",19539368600],["2026-01-14",19562968600],["2026-01-15",18729368600],["2026-01-16",17620568600],["2026-01-19",17246168600],["2026-01-20",16142968600],["2026-01-21",16188168600],["2026-01-22",16158568600],["2026-01-23",16355368600],["2026-01-26",15190568600],["2026-01-27",15058168600],["2026-01-28",14031768600],["2026-01-29",13360568600],["2026-01-30",12606568600],["2026-02-02",11160568600],["2026-02-03",11590968600],["2026-02-04",11391368600],["2026-02-05",11008168600],["2026-02-06",11282568600],["2026-02-09",11565368600],["2026-02-10",11394968600],["2026-02-11",11439368600],["2026-02-12",11571768600],["2026-02-13",10898968600],["2026-02-24",10910568600],["2026-02-25",11076568600],["2026-02-26",10426968600],["2026-02-27",10303368600],["2026-03-02",9836968600],["2026-03-03",9625768600],["2026-03-04",9752168600],["2026-03-05",9378568600],["2026-03-06",9410168600],["2026-03-09",9412568600],["2026-03-10",9542968600],["2026-03-11",9311768600],["2026-03-12",9099768600],["2026-03-13",9117368600],["2026-03-16",9204168600],["2026-03-17",9241368600],["2026-03-18",9344168600],["2026-03-19",9315368600],["2026-03-20",9671768600],["2026-03-23",9631368600],["2026-03-24",9670168600],["2026-03-25",9610168600],["2026-03-26",9476568600],["2026-03-27",9612968600],["2026-03-30",9383368600],["2026-03-31",9436568600],["2026-04-01",9606968600],["2026-04-02",9315368600],["2026-04-03",9444168600],["2026-04-07",9638168600],["2026-04-08",10575768600],["2026-04-09",10152968600],["2026-04-10",10228968600],["2026-04-13",9966168600],["2026-04-14",9792568600],["2026-04-15",9857768600],["2026-04-16",9897768600],["2026-04-17",9762968600],["2026-04-20",9392968600],["2026-04-21",9150168600],["2026-04-22",8928968600],["2026-04-23",8539368600],["2026-04-24",8435368600],["2026-04-27",8195768600],["2026-04-28",7816968600],["2026-04-29",8044968600],["2026-04-30",7476568600],["2026-05-06",7567368600],["2026-05-07",6815768600],["2026-05-08",6014168600],["2026-05-11",5578168600],["2026-05-12",5372968600],["2026-05-13",5293768600],["2026-05-14",5030968600],["2026-05-15",5235368600],["2026-05-18",5128168600],["2026-05-19",4712968600],["2026-05-20",4394968600],["2026-05-21",4505368600],["2026-05-22",4782168600],["2026-05-25",4358168600],["2026-05-26",4343768600],["2026-05-27",4354168600],["2026-05-28",4332168600],["2026-05-29",4334968600],["2026-06-01",4585768600],["2026-06-02",4742968600],["2026-06-03",4700968600],["2026-06-04",4672168600],["2026-06-05",4493368600],["2026-06-08",4593368600],["2026-06-09",4379368600],["2026-06-10",4327368600],["2026-06-11",4350168600],["2026-06-12",4453368600],["2026-06-15",4698568600],["2026-06-16",4586968600],["2026-06-17",4578568600],["2026-06-18",4582168600],["2026-06-22",4463768600],["2026-06-23",4325768600],["2026-06-24",4321368600],["2026-06-25",4266568600],["2026-06-26",4176568600],["2026-06-29",4139368600],["2026-06-30",4148568600],["2026-07-01",4108968600],["2026-07-02",4348568600],["2026-07-03",4317768600],["2026-07-06",4376968600],["2026-07-07",4464968600],["2026-07-08",4621368600],["2026-07-09",4680568600],["2026-07-10",4536568600],["2026-07-13",5252568600],["2026-07-14",5478568600],["2026-07-15",5436568600],["2026-07-16",5722168600],["2026-07-17",5923768600],["2026-07-20",6172568600],["2026-07-21",6140568600],["2026-07-22",5786968600],["2026-07-23",5733768600],["2026-07-24",5680568600],["2026-07-27",6136568600],["2026-07-28",5654168600],["2026-07-29",6234968600],["2026-07-30",5988168600],["2026-07-31",6188168600],["2026-08-03",6311768600],["2026-08-04",6252968600],["2026-08-05",6104968600],["2026-08-06",5732168600],["2026-08-07",5572568600],["2026-08-10",5366168600],["2026-08-11",5319368600],["2026-08-12",5281768600],["2026-08-13",5153368600],["2026-08-14",5092168600],["2026-08-17",5141768600],["2026-08-18",4948568600],["2026-08-19",5164568600],["2026-08-20",5069768600],["2026-08-21",5050968600],["2026-08-24",4926568600],["2026-08-25",5176168600],["2026-08-26",5173368600],["2026-08-27",5406968600],["2026-08-28",5334168600],["2026-08-31",5402568600],["2026-09-01",5189368600],["2026-09-02",5063368600],["2026-09-03",5059368600],["2026-09-04",5219368600],["2026-09-07",5531368600],["2026-09-08",5500968600],["2026-09-09",5380168600],["2026-09-10",5442968600],["2026-09-11",5232168600],["2026-09-14",5295368600],["2026-09-15",5509768600],["2026-09-16",5703368600],["2026-09-17",5690168600],["2026-09-18",5722568600],["2026-09-21",5606968600],["2026-09-22",5718568600],["2026-09-23",5764968600],["2026-09-24",5487368600],["2026-09-28",5518968600],["2026-09-29",5613768600],["2026-09-30",5611368600],["2026-10-08",5594968600],["2026-10-09",5720168600],["2026-10-12",5677768600],["2026-10-13",5706168600],["2026-10-14",5571768600],["2026-10-15",5659768600],["2026-10-16",5774168600],["2026-10-19",6381368600],["2026-10-20",6110568600],["2026-10-21",6099768600],["2026-10-22",6448168600],["2026-10-23",7301368600]]},"512100":{"name":"中证1000ETF南方","exchange":"SSE","points":[["2025-10-27",24665217600],["2025-10-28",24691217600],["2025-10-29",24847217600],["2025-10-30",24605217600],["2025-10-31",24911217600],["2025-11-03",24773217600],["2025-11-04",24687217600],["2025-11-05",24745217600],["2025-11-06",24715217600],["2025-11-07",24723217600],["2025-11-10",24699217600],["2025-11-11",24665217600],["2025-11-12",24787217600],["2025-11-13",24893217600],["2025-11-14",24787217600],["2025-11-17",24677217600],["2025-11-18",24675217600],["2025-11-19",24855217600],["2025-11-20",24995217600],["2025-11-21",25703217600],["2025-11-24",25745217600],["2025-11-25",25223217600],["2025-11-26",25041217600],["2025-11-27",24905217600],["2025-11-28",24877217600],["2025-12-01",24727217600],["2025-12-02",24655217600],["2025-12-03",24805217600],["2025-12-04",24907217600],["2025-12-05",25179217600],["2025-12-08",25147217600],["2025-12-09",25113217600],["2025-12-10",24881217600],["2025-12-11",24781217600],["2025-12-12",25089217600],["2025-12-15",25083217600],["2025-12-16",25135217600],["2025-12-17",25245217600],["2025-12-18",25175217600],["2025-12-19",25261217600],["2025-12-22",25137217600],["2025-12-23",25085217600],["2025-12-24",25185217600],["2025-12-25",25359217600],["2025-12-26",25907217600],["2025-12-29",25739217600],["2025-12-30",25835217600],["2025-12-31",25651217600],["2026-01-05",25867217600],["2026-01-06",26017217600],["2026-01-07",25713217600],["2026-01-08",25699217600],["2026-01-09",26287217600],["2026-01-12",26695217600],["2026-01-13",26959217600],["2026-01-14",26895217600],["2026-01-15",26559217600],["2026-01-16",25329217600],["2026-01-19",23747217600],["2026-01-20",22627217600],["2026-01-21",18423217600],["2026-01-22",16909217600],["2026-01-23",15949217600],["2026-01-26",13501217600],["2026-01-27",12753217600],["2026-01-28",11059217600],["2026-01-29",10651217600],["2026-01-30",10711217600],["2026-02-02",10223217600],["2026-02-03",10431217600],["2026-02-04",9983217600],["2026-02-05",9887217600],["2026-02-06",10051217600],["2026-02-09",10545217600],["2026-02-10",10437217600],["2026-02-11",10591217600],["2026-02-12",10837217600],["2026-02-13",10151217600],["2026-02-24",10019217600],["2026-02-25",10063217600],["2026-02-26",9115217600],["2026-02-27",8939217600],["2026-03-02",8227217600],["2026-03-03",8259217600],["2026-03-04",8355217600],["2026-03-05",7843217600],["2026-03-06",7781217600],["2026-03-09",7721217600],["2026-03-10",7735217600],["2026-03-11",7475217600],["2026-03-12",7231217600],["2026-03-13",7287217600],["2026-03-16",7313217600],["2026-03-17",7409217600],["2026-03-18",7509217600],["2026-03-19",7419217600],["2026-03-20",7693217600],["2026-03-23",8131217600],["2026-03-24",8243217600],["2026-03-25",7821217600],["2026-03-26",7639217600],["2026-03-27",7737217600],["2026-03-30",7527217600],["2026-03-31",7565217600],["2026-04-01",7651217600],["2026-04-02",7419217600],["2026-04-03",7557217600],["2026-04-07",7823217600],["2026-04-08",8775217600],["2026-04-09",8135217600],["2026-04-10",7921217600],["2026-04-13",7635217600],["2026-04-14",7441217600],["2026-04-15",7511217600],["2026-04-16",7525217600],["2026-04-17",7425217600],["2026-04-20",7169217600],["2026-04-21",6931217600],["2026-04-22",6729217600],["2026-04-23",6853217600],["2026-04-24",6755217600],["2026-04-27",6015217600],["2026-04-28",5537217600],["2026-04-29",5559217600],["2026-04-30",4321217600],["2026-05-06",4747217600],["2026-05-07",4631217600],["2026-05-08",4241217600],["2026-05-11",3675217600],["2026-05-12",3475217600],["2026-05-13",3597217600],["2026-05-14",3323217600],["2026-05-15",3463217600],["2026-05-18",3375217600],["2026-05-19",3375217600],["2026-05-20",3041217600],["2026-05-21",3415217600],["2026-05-22",3523217600],["2026-05-25",3009217600],["2026-05-26",3113217600],["2026-05-27",3053217600],["2026-05-28",2943217600],["2026-05-29",3621217600],["2026-06-01",4435217600],["2026-06-02",4513217600],["2026-06-03",3727217600],["2026-06-04",3449217600],["2026-06-05",3359217600],["2026-06-08",4223217600],["2026-06-09",3223217600],["2026-06-10",3157217600],["2026-06-11",3299217600],["2026-06-12",3507217600],["2026-06-15",3577217600],["2026-06-16",3191217600],["2026-06-17",3243217600],["2026-06-18",3233217600],["2026-06-22",3179217600],["2026-06-23",3209217600],["2026-06-24",3035217600],["2026-06-25",2967217600],["2026-06-26",3037217600],["2026-06-29",3369217600],["2026-06-30",3077217600],["2026-07-01",3011217600],["2026-07-02",3395217600],["2026-07-03",3453217600],["2026-07-06",3961217600],["2026-07-07",4739217600],["2026-07-08",5789217600],["2026-07-09",5905217600],["2026-07-10",5259217600],["2026-07-13",7121217600],["2026-07-14",7629217600],["2026-07-15",7545217600],["2026-07-16",8705217600],["2026-07-17",9741217600],["2026-07-20",10447217600],["2026-07-21",10693217600],["2026-07-22",8671217600],["2026-07-23",8625217600],["2026-07-24",8381217600],["2026-07-27",9413217600],["2026-07-28",9051217600],["2026-07-29",11055217600],["2026-07-30",11331217600],["2026-07-31",11401217600],["2026-08-03",11741217600],["2026-08-04",12251217600],["2026-08-05",11873217600],["2026-08-06",10557217600],["2026-08-07",8957217600],["2026-08-10",8029217600],["2026-08-11",7799217600],["2026-08-12",7199217600],["2026-08-13",6887217600],["2026-08-14",6665217600],["2026-08-17",6681217600],["2026-08-18",6277217600],["2026-08-19",7341217600],["2026-08-20",6787217600],["2026-08-21",6571217600],["2026-08-24",6437217600],["2026-08-25",6881217600],["2026-08-26",6623217600],["2026-08-27",6793217600],["2026-08-28",6677217600],["2026-08-31",6547217600],["2026-09-01",6237217600],["2026-09-02",6065217600],["2026-09-03",6111217600],["2026-09-04",6557217600],["2026-09-07",6575217600],["2026-09-08",6439217600],["2026-09-09",6265217600],["2026-09-10",6245217600],["2026-09-11",6087217600],["2026-09-14",5885217600],["2026-09-15",5857217600],["2026-09-16",6449217600],["2026-09-17",6391217600],["2026-09-18",6387217600],["2026-09-21",6299217600],["2026-09-22",6539217600],["2026-09-23",6471217600],["2026-09-24",6453217600],["2026-09-28",7041217600],["2026-09-29",6975217600],["2026-09-30",6951217600],["2026-10-08",7215217600],["2026-10-09",7883217600],["2026-10-12",8065217600],["2026-10-13",8209217600],["2026-10-14",7773217600],["2026-10-15",7943217600],["2026-10-16",8081217600],["2026-10-19",8821217600],["2026-10-20",8333217600],["2026-10-21",8457217600],["2026-10-22",9681217600],["2026-10-23",10877217600]]},"159919":{"name":"沪深300ETF嘉实","exchange":"SZSE","points":[["2026-05-06",17532216600],["2026-05-07",17291916600],["2026-05-08",16887816600],["2026-05-11",16267716600],["2026-05-12",15958116600],["2026-05-13",15594516600],["2026-05-14",15304716600],["2026-05-15",15258816600],["2026-05-18",15233616600],["2026-05-19",14900616600],["2026-05-20",14540616600],["2026-05-21",14087916600],["2026-05-22",13908816600],["2026-05-25",13002516600],["2026-05-26",12804516600],["2026-05-27",12492216600],["2026-05-28",12386916600],["2026-05-29",12356316600],["2026-06-01",12381516600],["2026-06-02",12421116600],["2026-06-03",12315816600],["2026-06-04",12262716600],["2026-06-05",12294216600],["2026-06-08",12521016600],["2026-06-09",12480516600],["2026-06-10",12483216600],["2026-06-11",12495816600],["2026-06-12",12413016600],["2026-06-15",12005316600],["2026-06-16",11605716600],["2026-06-17",11043216600],["2026-06-18",10564416600],["2026-06-22",10364616600],["2026-06-23",9492516600],["2026-06-24",8598816600],["2026-06-25",7650216600],["2026-06-26",7608816600],["2026-06-29",6996816600],["2026-06-30",6939216600],["2026-07-01",6554916600],["2026-07-02",6319116600],["2026-07-03",5428116600],["2026-07-06",5361516600],["2026-07-07",5356116600],["2026-07-08",5368716600],["2026-07-09",5343516600],["2026-07-10",5380416600],["2026-07-13",5609916600],["2026-07-14",5614416600],["2026-07-15",5569416600],["2026-07-16",5683716600],["2026-07-17",6239016600],["2026-07-20",6374016600],["2026-07-21",6194916600],["2026-07-22",6182316600],["2026-07-23",6192216600],["2026-07-24",6244416600],["2026-07-27",6290316600],["2026-07-28",6335316600],["2026-07-29",6424416600],["2026-07-30",6544116600],["2026-07-31",6608916600],["2026-08-03",6705216600],["2026-08-04",6612516600],["2026-08-05",6518016600],["2026-08-06",6488316600],["2026-08-07",6378516600],["2026-08-10",6335316600],["2026-08-11",6339816600],["2026-08-12",6284916600],["2026-08-13",6235416600],["2026-08-14",6227316600],["2026-08-17",6172416600],["2026-08-18",6132816600],["2026-08-19",6266016600],["2026-08-20",6271416600],["2026-08-21",6221016600],["2026-08-24",6278616600],["2026-08-25",6300216600],["2026-08-26",6303816600],["2026-08-27",6284916600],["2026-08-28",6262416600],["2026-08-31",6298416600],["2026-09-01",6230016600],["2026-09-02",6226416600],["2026-09-03",6235416600],["2026-09-04",6253416600],["2026-09-07",6287616600],["2026-09-08",6257016600],["2026-09-09",6247116600],["2026-09-10",6243516600],["2026-09-11",6262416600],["2026-09-14",6311016600],["2026-09-15",6337116600],["2026-09-16",6341616600],["2026-09-17",6340716600],["2026-09-18",6329016600],["2026-09-21",6331716600],["2026-09-22",6445116600],["2026-09-23",6518916600],["2026-09-24",6566616600],["2026-09-28",6599016600],["2026-09-29",6618816600],["2026-09-30",6866316600],["2026-10-08",6878916600],["2026-10-09",6856416600],["2026-10-12",6844716600],["2026-10-13",6848316600],["2026-10-14",6839316600],["2026-10-15",6851916600],["2026-10-16",6929316600],["2026-10-19",6986016600],["2026-10-20",7342416600],["2026-10-21",7565616600],["2026-10-22",9767916600],["2026-10-23",9987516600]]},"510050":{"name":"上证50ETF华夏","exchange":"SSE","points":[["2025-10-27",58075866800],["2025-10-28",58523166800],["2025-10-29",58542066800],["2025-10-30",58137066800],["2025-10-31",58621266800],["2025-11-03",58241466800],["2025-11-04",57647466800],["2025-11-05",57730266800],["2025-11-06",57420666800],["2025-11-07",57390066800],["2025-11-10",57381066800],["2025-11-11",57293766800],["2025-11-12",57031866800],["2025-11-13",57131766800],["2025-11-14",57099366800],["2025-11-17",57466566800],["2025-11-18",57348666800],["2025-11-19",56975166800],["2025-11-20",57031866800],["2025-11-21",57197466800],["2025-11-24",57691566800],["2025-11-25",57616866800],["2025-11-26",57605166800],["2025-11-27",57816666800],["2025-11-28",57950766800],["2025-12-01",57458466800],["2025-12-02",57395466800],["2025-12-03",57224466800],["2025-12-04",57364866800],["2025-12-05",57533166800],["2025-12-08",57547566800],["2025-12-09",57420666800],["2025-12-10",57147066800],["2025-12-11",57341466800],["2025-12-12",57624966800],["2025-12-15",57502566800],["2025-12-16",57167766800],["2025-12-17",57162366800],["2025-12-18",57110166800],["2025-12-19",57485466800],["2025-12-22",57508866800],["2025-12-23",57093066800],["2025-12-24",57271266800],["2025-12-25",57219066800],["2025-12-26",57651066800],["2025-12-29",57466566800],["2025-12-30",57251466800],["2025-12-31",56664666800],["2026-01-05",56589066800],["2026-01-06",56683566800],["2026-01-07",56409066800],["2026-01-08",56404566800],["2026-01-09",56499066800],["2026-01-12",56337066800],["2026-01-13",55887966800],["2026-01-14",55833066800],["2026-01-15",52986366800],["2026-01-16",50492466800],["2026-01-19",48948966800],["2026-01-20",47108466800],["2026-01-21",42864066800],["2026-01-22",41184666800],["2026-01-23",38849166800],["2026-01-26",34804566800],["2026-01-27",33157566800],["2026-01-28",28257966800],["2026-01-29",25926966800],["2026-01-30",25556166800],["2026-02-02",25177266800],["2026-02-03",25217766800],["2026-02-04",24993666800],["2026-02-05",25128666800],["2026-02-06",25022466800],["2026-02-09",24759666800],["2026-02-10",24513966800],["2026-02-11",24363666800],["2026-02-12",24387066800],["2026-02-13",23895666800],["2026-02-24",23806566800],["2026-02-25",23906466800],["2026-02-26",23733666800],["2026-02-27",23690466800],["2026-03-02",22951566800],["2026-03-03",22667166800],["2026-03-04",22869666800],["2026-03-05",22569066800],["2026-03-06",22976766800],["2026-03-09",22774266800],["2026-03-10",23028066800],["2026-03-11",22921866800],["2026-03-12",22611366800],["2026-03-13",22831866800],["2026-03-16",23191866800],["2026-03-17",23126166800],["2026-03-18",23280066800],["2026-03-19",23283666800],["2026-03-20",23851566800],["2026-03-23",24400566800],["2026-03-24",24251166800],["2026-03-25",23494266800],["2026-03-26",23510466800],["2026-03-27",23442066800],["2026-03-30",23263866800],["2026-03-31",23022666800],["2026-04-01",23010066800],["2026-04-02",22862466800],["2026-04-03",22975866800],["2026-04-07",23004666800],["2026-04-08",23152266800],["2026-04-09",22963266800],["2026-04-10",22791366800],["2026-04-13",22703166800],["2026-04-14",22560066800],["2026-04-15",22468266800],["2026-04-16",22672566800],["2026-04-17",22883166800],["2026-04-20",22821066800],["2026-04-21",22488966800],["2026-04-22",22121766800],["2026-04-23",21196566800],["2026-04-24",20806866800],["2026-04-27",20155266800],["2026-04-28",19282266800],["2026-04-29",18530766800],["2026-04-30",17234766800],["2026-05-06",16327566800],["2026-05-07",15369066800],["2026-05-08",14096466800],["2026-05-11",12960666800],["2026-05-12",12424266800],["2026-05-13",12115566800],["2026-05-14",11716866800],["2026-05-15",11909466800],["2026-05-18",12234366800],["2026-05-19",11014866800],["2026-05-20",10051866800],["2026-05-21",9796266800],["2026-05-22",9591066800],["2026-05-25",8579466800],["2026-05-26",8325666800],["2026-05-27",7809966800],["2026-05-28",7961166800],["2026-05-29",7810866800],["2026-06-01",8451666800],["2026-06-02",8494866800],["2026-06-03",8152866800],["2026-06-04",7852266800],["2026-06-05",7661466800],["2026-06-08",8115066800],["2026-06-09",7625466800],["2026-06-10",7508466800],["2026-06-11",7738866800],["2026-06-12",8164566800],["2026-06-15",8288766800],["2026-06-16",8330166800],["2026-06-17",7759566800],["2026-06-18",7699266800],["2026-06-22",7417566800],["2026-06-23",7343766800],["2026-06-24",6793866800],["2026-06-25",6468066800],["2026-06-26",6387966800],["2026-06-29",6300666800],["2026-06-30",6392466800],["2026-07-01",6388866800],["2026-07-02",6675966800],["2026-07-03",6537366800],["2026-07-06",6405066800],["2026-07-07",6544566800],["2026-07-08",6595866800],["2026-07-09",6586866800],["2026-07-10",6408666800],["2026-07-13",6667866800],["2026-07-14",6852366800],["2026-07-15",7260066800],["2026-07-16",8150166800],["2026-07-17",8237466800],["2026-07-20",8322066800],["2026-07-21",7476066800],["2026-07-22",7475166800],["2026-07-23",7829766800],["2026-07-24",7440066800],["2026-07-27",7619166800],["2026-07-28",7530966800],["2026-07-29",7340166800],["2026-07-30",7144866800],["2026-07-31",7214166800],["2026-08-03",7677666800],["2026-08-04",7635366800],["2026-08-05",7147566800],["2026-08-06",7107966800],["2026-08-07",6894666800],["2026-08-10",6778566800],["2026-08-11",7146666800],["2026-08-12",7004466800],["2026-08-13",6966666800],["2026-08-14",7081866800],["2026-08-17",6919866800],["2026-08-18",6703866800],["2026-08-19",6940566800],["2026-08-20",7292466800],["2026-08-21",7325766800],["2026-08-24",7521066800],["2026-08-25",7633566800],["2026-08-26",7246566800],["2026-08-27",6909966800],["2026-08-28",6826266800],["2026-08-31",6793866800],["2026-09-01",6533766800],["2026-09-02",6472566800],["2026-09-03",6560766800],["2026-09-04",6810966800],["2026-09-07",7018866800],["2026-09-08",6847866800],["2026-09-09",6846966800],["2026-09-10",6718266800],["2026-09-11",7031466800],["2026-09-14",7046766800],["2026-09-15",7189866800],["2026-09-16",7591266800],["2026-09-17",7790166800],["2026-09-18",7960266800],["2026-09-21",7689366800],["2026-09-22",7476066800],["2026-09-23",7379766800],["2026-09-24",7167366800],["2026-09-28",7363566800],["2026-09-29",7248366800],["2026-09-30",6938766800],["2026-10-08",6935166800],["2026-10-09",7122366800],["2026-10-12",7119666800],["2026-10-13",7298766800],["2026-10-14",7315866800],["2026-10-15",7602966800],["2026-10-16",8916066800],["2026-10-19",9619866800],["2026-10-20",11160666800],["2026-10-21",11390166800],["2026-10-22",12983166800],["2026-10-23",12993066800]]},"588080":{"name":"科创50ETF易方达","exchange":"SSE","points":[["2025-10-27",50473628100],["2025-10-28",50239628100],["2025-10-29",50284628100],["2025-10-30",50371628100],["2025-10-31",50542628100],["2025-11-03",50590628100],["2025-11-04",50569628100],["2025-11-05",50641628100],["2025-11-06",50395628100],["2025-11-07",50371628100],["2025-11-10",50434628100],["2025-11-11",50413628100],["2025-11-12",50536628100],["2025-11-13",50425628100],["2025-11-14",50596628100],["2025-11-17",50596628100],["2025-11-18",50605628100],["2025-11-19",50677628100],["2025-11-20",50818628100],["2025-11-21",51376628100],["2025-11-24",51253628100],["2025-11-25",51277628100],["2025-11-26",51043628100],["2025-11-27",50743628100],["2025-11-28",50575628100],["2025-12-01",50581628100],["2025-12-02",50476628100],["2025-12-03",50560628100],["2025-12-04",50551628100],["2025-12-05",50608628100],["2025-12-08",50563628100],["2025-12-09",50764628100],["2025-12-10",50992628100],["2025-12-11",51367628100],["2025-12-12",51325628100],["2025-12-15",51370628100],["2025-12-16",51748628100],["2025-12-17",51607628100],["2025-12-18",51724628100],["2025-12-19",51832628100],["2025-12-22",51691628100],["2025-12-23",51538628100],["2025-12-24",51385628100],["2025-12-25",51556628100],["2025-12-26",51598628100],["2025-12-29",51571628100],["2025-12-30",51415628100],["2025-12-31",51511628100],["2026-01-05",51622628100],["2026-01-06",51688628100],["2026-01-07",51400628100],["2026-01-08",51037628100],["2026-01-09",50743628100],["2026-01-12",50116628100],["2026-01-13",50170628100],["2026-01-14",49165628100],["2026-01-15",42241628100],["2026-01-16",34414628100],["2026-01-19",32176628100],["2026-01-20",29872628100],["2026-01-21",28420628100],["2026-01-22",28453628100],["2026-01-23",28606628100],["2026-01-26",28594628100],["2026-01-27",28525628100],["2026-01-28",28675628100],["2026-01-29",28888628100],["2026-01-30",28819628100],["2026-02-02",28906628100],["2026-02-03",29095628100],["2026-02-04",29212628100],["2026-02-05",29371628100],["2026-02-06",29464628100],["2026-02-09",29317628100],["2026-02-10",29200628100],["2026-02-11",29173628100],["2026-02-12",29041628100],["2026-02-13",28876628100],["2026-02-24",28864628100],["2026-02-25",28576628100],["2026-02-26",28480628100],["2026-02-27",28348628100],["2026-03-02",28303628100],["2026-03-03",28564628100],["2026-03-04",28669628100],["2026-03-05",28318628100],["2026-03-06",28228628100],["2026-03-09",28339628100],["2026-03-10",28144628100],["2026-03-11",28030628100],["2026-03-12",28057628100],["2026-03-13",28141628100],["2026-03-16",28258628100],["2026-03-17",28285628100],["2026-03-18",27982628100],["2026-03-19",28108628100],["2026-03-20",28267628100],["2026-03-23",28540628100],["2026-03-24",28843628100],["2026-03-25",28720628100],["2026-03-26",28963628100],["2026-03-27",28987628100],["2026-03-30",29053628100],["2026-03-31",29068628100],["2026-04-01",28780628100],["2026-04-02",28957628100],["2026-04-03",29086628100],["2026-04-07",28945628100],["2026-04-08",28492628100],["2026-04-09",28636628100],["2026-04-10",28438628100],["2026-04-13",28210628100],["2026-04-14",27949628100],["2026-04-15",27682628100],["2026-04-16",27379628100],["2026-04-17",27271628100],["2026-04-20",26998628100],["2026-04-21",27064628100],["2026-04-22",26788628100],["2026-04-23",26554628100],["2026-04-24",26056628100],["2026-04-27",25549628100],["2026-04-28",25471628100],["2026-04-29",25303628100],["2026-04-30",24571628100],["2026-05-06",23449628100],["2026-05-07",22804628100],["2026-05-08",22612628100],["2026-05-11",22255628100],["2026-05-12",21901628100],["2026-05-13",21628628100],["2026-05-14",21514628100],["2026-05-15",21235628100],["2026-05-18",20968628100],["2026-05-19",20728628100],["2026-05-20",20500628100],["2026-05-21",20305628100],["2026-05-22",20140628100],["2026-05-25",19846628100],["2026-05-26",19825628100],["2026-05-27",19990628100],["2026-05-28",19888628100],["2026-05-29",20158628100],["2026-06-01",20254628100],["2026-06-02",20230628100],["2026-06-03",19864628100],["2026-06-04",19648628100],["2026-06-05",19819628100],["2026-06-08",20122628100],["2026-06-09",20032628100],["2026-06-10",19882628100],["2026-06-11",19921628100],["2026-06-12",19876628100],["2026-06-15",19684628100],["2026-06-16",19765628100],["2026-06-17",19711628100],["2026-06-18",19306628100],["2026-06-22",19165628100],["2026-06-23",19051628100],["2026-06-24",18850628100],["2026-06-25",18817628100],["2026-06-26",18685628100],["2026-06-29",18676628100],["2026-06-30",18766628100],["2026-07-01",18874628100],["2026-07-02",19516628100],["2026-07-03",19807628100],["2026-07-06",19957628100],["2026-07-07",20023628100],["2026-07-08",20053628100],["2026-07-09",20137628100],["2026-07-10",20395628100],["2026-07-13",20449628100],["2026-07-14",20716628100],["2026-07-15",21097628100],["2026-07-16",21286628100],["2026-07-17",22051628100],["2026-07-20",22666628100],["2026-07-21",22612628100],["2026-07-22",22537628100],["2026-07-23",22837628100],["2026-07-24",22735628100],["2026-07-27",22864628100],["2026-07-28",23281628100],["2026-07-29",23866628100],["2026-07-30",24766628100],["2026-07-31",24250628100],["2026-08-03",25030628100],["2026-08-04",24799628100],["2026-08-05",24259628100],["2026-08-06",24079628100],["2026-08-07",23704628100],["2026-08-10",23785628100],["2026-08-11",23800628100],["2026-08-12",23680628100],["2026-08-13",23584628100],["2026-08-14",23722628100],["2026-08-17",23377628100],["2026-08-18",23398628100],["2026-08-19",24286628100],["2026-08-20",24571628100],["2026-08-21",24631628100],["2026-08-24",24982628100],["2026-08-25",25183628100],["2026-08-26",24973628100],["2026-08-27",24658628100],["2026-08-28",24631628100],["2026-08-31",24700628100],["2026-09-01",24898628100],["2026-09-02",25048628100],["2026-09-03",25225628100],["2026-09-04",25624628100],["2026-09-07",25396628100],["2026-09-08",25642628100],["2026-09-09",25816628100],["2026-09-10",25921628100],["2026-09-11",26512628100],["2026-09-14",26713628100],["2026-09-15",26347628100],["2026-09-16",26038628100],["2026-09-17",26053628100],["2026-09-18",25954628100],["2026-09-21",25930628100],["2026-09-22",25780628100],["2026-09-23",25711628100],["2026-09-24",25855628100],["2026-09-28",26374628100],["2026-09-29",26560628100],["2026-09-30",27103628100],["2026-10-08",27667628100],["2026-10-09",28204628100],["2026-10-12",28426628100],["2026-10-13",28603628100],["2026-10-14",28738628100],["2026-10-15",28882628100],["2026-10-16",29197628100],["2026-10-19",29584628100],["2026-10-20",29521628100],["2026-10-21",29533628100],["2026-10-22",29941628100],["2026-10-23",30454628100]]},"510100":{"name":"上证50ETF易方达","exchange":"SSE","points":[["2025-10-27",1413506800],["2025-10-28",1411706800],["2025-10-29",1409906800],["2025-10-30",1382006800],["2025-10-31",1398206800],["2025-11-03",1411706800],["2025-11-04",1391906800],["2025-11-05",1421606800],["2025-11-06",1439606800],["2025-11-07",1472906800],["2025-11-10",1435106800],["2025-11-11",1423406800],["2025-11-12",1413506800],["2025-11-13",1437806800],["2025-11-14",1428806800],["2025-11-17",1430606800],["2025-11-18",1432406800],["2025-11-19",1425206800],["2025-11-20",1427006800],["2025-11-21",1435106800],["2025-11-24",1467506800],["2025-11-25",1472906800],["2025-11-26",1479206800],["2025-11-27",1510706800],["2025-11-28",1502606800],["2025-12-01",1436006800],["2025-12-02",1436906800],["2025-12-03",1441406800],["2025-12-04",1469306800],["2025-12-05",1495406800],["2025-12-08",1526906800],["2025-12-09",1517906800],["2025-12-10",1507106800],["2025-12-11",1506206800],["2025-12-12",1525106800],["2025-12-15",1527806800],["2025-12-16",1502606800],["2025-12-17",1517006800],["2025-12-18",1516106800],["2025-12-19",1524206800],["2025-12-22",1552106800],["2025-12-23",1515206800],["2025-12-24",1554806800],["2025-12-25",1562906800],["2025-12-26",1701506800],["2025-12-29",1665506800],["2025-12-30",1699706800],["2025-12-31",1572806800],["2026-01-05",1589006800],["2026-01-06",1662806800],["2026-01-07",1661006800],["2026-01-08",1615106800],["2026-01-09",1650206800],["2026-01-12",1589006800],["2026-01-13",1581806800],["2026-01-14",1661906800],["2026-01-15",1515206800],["2026-01-16",1489106800],["2026-01-19",1504406800],["2026-01-20",1497206800],["2026-01-21",1542206800],["2026-01-22",1556606800],["2026-01-23",1613306800],["2026-01-26",1614206800],["2026-01-27",1495406800],["2026-01-28",1437806800],["2026-01-29",1456706800],["2026-01-30",1450406800],["2026-02-02",1338806800],["2026-02-03",1307306800],["2026-02-04",1296506800],["2026-02-05",1319006800],["2026-02-06",1330706800],["2026-02-09",1368506800],["2026-02-10",1331606800],["2026-02-11",1333406800],["2026-02-12",1357706800],["2026-02-13",1233506800],["2026-02-24",1226306800],["2026-02-25",1301006800],["2026-02-26",1292006800],["2026-02-27",1291106800],["2026-03-02",1224506800],["2026-03-03",1201106800],["2026-03-04",1226306800],["2026-03-05",1176806800],["2026-03-06",1250606800],["2026-03-09",1177706800],["2026-03-10",1249706800],["2026-03-11",1255106800],["2026-03-12",1196606800],["2026-03-13",1212806800],["2026-03-16",1245206800],["2026-03-17",1266806800],["2026-03-18",1224506800],["2026-03-19",1182206800],["2026-03-20",1204706800],["2026-03-23",1169606800],["2026-03-24",1193906800],["2026-03-25",1209206800],["2026-03-26",1201106800],["2026-03-27",1164206800],["2026-03-30",1121006800],["2026-03-31",1102106800],["2026-04-01",1105706800],["2026-04-02",1086806800],["2026-04-03",1085906800],["2026-04-07",1100306800],["2026-04-08",1153406800],["2026-04-09",1113806800],["2026-04-10",1109306800],["2026-04-13",1101206800],["2026-04-14",1088606800],["2026-04-15",1074206800],["2026-04-16",1112006800],["2026-04-17",1116506800],["2026-04-20",1120106800],["2026-04-21",1110206800],["2026-04-22",1126406800],["2026-04-23",1103906800],["2026-04-24",1089506800],["2026-04-27",1084106800],["2026-04-28",1046306800],["2026-04-29",1054406800],["2026-04-30",991406800],["2026-05-06",1001306800],["2026-05-07",997706800],["2026-05-08",995906800],["2026-05-11",977906800],["2026-05-12",960806800],["2026-05-13",1016606800],["2026-05-14",987806800],["2026-05-15",1010306800],["2026-05-18",1011206800],["2026-05-19",959006800],["2026-05-20",920306800],["2026-05-21",917606800],["2026-05-22",922106800],["2026-05-25",905906800],["2026-05-26",909506800],["2026-05-27",896006800],["2026-05-28",905006800],["2026-05-29",1240706800],["2026-06-01",1333406800],["2026-06-02",1326206800],["2026-06-03",1306406800],["2026-06-04",1274006800],["2026-06-05",1229006800],["2026-06-08",1238906800],["2026-06-09",1070606800],["2026-06-10",1049906800],["2026-06-11",1103906800],["2026-06-12",1156106800],["2026-06-15",1196606800],["2026-06-16",1210106800],["2026-06-17",1181306800],["2026-06-18",1202906800],["2026-06-22",1183106800],["2026-06-23",1162406800],["2026-06-24",1121006800],["2026-06-25",1087706800],["2026-06-26",1092206800],["2026-06-29",1085906800],["2026-06-30",1087706800],["2026-07-01",1100306800],["2026-07-02",1131806800],["2026-07-03",1122806800],["2026-07-06",1059806800],["2026-07-07",1051706800],["2026-07-08",1043606800],["2026-07-09",1037306800],["2026-07-10",1011206800],["2026-07-13",1000406800],["2026-07-14",1042706800],["2026-07-15",1075106800],["2026-07-16",1115606800],["2026-07-17",1112006800],["2026-07-20",1157906800],["2026-07-21",1134506800],["2026-07-22",1150706800],["2026-07-23",1289306800],["2026-07-24",1353206800],["2026-07-27",1291106800],["2026-07-28",1202906800],["2026-07-29",1070606800],["2026-07-30",1007606800],["2026-07-31",1004006800],["2026-08-03",1036406800],["2026-08-04",1042706800],["2026-08-05",1026506800],["2026-08-06",1011206800],["2026-08-07",987806800],["2026-08-10",969806800],["2026-08-11",988706800],["2026-08-12",975206800],["2026-08-13",955406800],["2026-08-14",953606800],["2026-08-17",936506800],["2026-08-18",897806800],["2026-08-19",905006800],["2026-08-20",939206800],["2026-08-21",940106800],["2026-08-24",962606800],["2026-08-25",979706800],["2026-08-26",998606800],["2026-08-27",981506800],["2026-08-28",964406800],["2026-08-31",953606800],["2026-09-01",933806800],["2026-09-02",909506800],["2026-09-03",933806800],["2026-09-04",959006800],["2026-09-07",986906800],["2026-09-08",962606800],["2026-09-09",963506800],["2026-09-10",958106800],["2026-09-11",964406800],["2026-09-14",968006800],["2026-09-15",975206800],["2026-09-16",982406800],["2026-09-17",982406800],["2026-09-18",988706800],["2026-09-21",991406800],["2026-09-22",1013906800],["2026-09-23",1024706800],["2026-09-24",977006800],["2026-09-28",992306800],["2026-09-29",975206800],["2026-09-30",962606800],["2026-10-08",964406800],["2026-10-09",984206800],["2026-10-12",985106800],["2026-10-13",1002206800],["2026-10-14",983306800],["2026-10-15",970706800],["2026-10-16",947306800],["2026-10-19",959006800],["2026-10-20",959006800],["2026-10-21",958106800],["2026-10-22",966206800],["2026-10-23",970706800]]}}}</script>
+<script>
+(() => {
+  'use strict';
+
+  const PRESETS = [
+    { code: '510310', name: '沪深300ETF易方达', exchange: 'SSE' },
+    { code: '159915', name: '创业板ETF易方达', exchange: 'SZSE' },
+    { code: '588000', name: '科创50ETF华夏', exchange: 'SSE' },
+    { code: '510300', name: '沪深300ETF华泰柏瑞', exchange: 'SSE' },
+    { code: '510330', name: '沪深300ETF华夏', exchange: 'SSE' },
+    { code: '510500', name: '中证500ETF南方', exchange: 'SSE' },
+    { code: '512100', name: '中证1000ETF南方', exchange: 'SSE' },
+    { code: '159919', name: '沪深300ETF嘉实', exchange: 'SZSE' },
+    { code: '510050', name: '上证50ETF华夏', exchange: 'SSE' },
+    { code: '588080', name: '科创50ETF易方达', exchange: 'SSE' },
+    { code: '510100', name: '上证50ETF易方达', exchange: 'SSE' }
+  ];
+  const PRESET_MAP = new Map(PRESETS.map(f => [f.code, f]));
+  const EXCHANGE_LABEL = { SSE: '上交所', SZSE: '深交所' };
+  const STORE_KEY = 'etf-share-history-v2';
+  const LAST_KEY = 'etf-share-last-code-v2';
+  const RANGE_KEY = 'etf-share-range-v2';
+  const YI = 100000000;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const $ = sel => document.querySelector(sel);
+  const hasLS = (() => {
+    try {
+      const k = '__etf_test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch (_) { return false; }
+  })();
+
+  const nf0 = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
+  const nf2 = new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nf3 = new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+
+  const state = {
+    code: null,
+    range: '365',
+    series: [],
+    visible: [],
+    hoverIndex: -1,
+    chart: null,
+    loading: false,
+    refreshSeq: 0,
+    lastError: null,
+    memoryOnly: !hasLS
+  };
+
+  let store = null;
+  let seedMeta = null;
+  let toastTimer = null;
+  let refDateCache = { date: null, at: 0 };
+  let resizeTimer = null;
+
+  const els = {
+    fundSelect: $('#fundSelect'),
+    codeInput: $('#codeInput'),
+    queryBtn: $('#queryBtn'),
+    refreshBtn: $('#refreshBtn'),
+    exportBtn: $('#exportBtn'),
+    rangeTabs: $('#rangeTabs'),
+    fundName: $('#fundName'),
+    fundSub: $('#fundSub'),
+    exchangeKicker: $('#exchangeKicker'),
+    latestDate: $('#latestDate'),
+    latestShare: $('#latestShare'),
+    latestShareRaw: $('#latestShareRaw'),
+    dayChange: $('#dayChange'),
+    dayChangePct: $('#dayChangePct'),
+    rangeChange: $('#rangeChange'),
+    rangeChangeAbs: $('#rangeChangeAbs'),
+    pointCount: $('#pointCount'),
+    pointRange: $('#pointRange'),
+    chartWrap: $('#chartWrap'),
+    chart: $('#chart'),
+    chartEmpty: $('#chartEmpty'),
+    tooltip: $('#tooltip'),
+    chartRangeText: $('#chartRangeText'),
+    tableBody: $('#tableBody'),
+    tableCount: $('#tableCount'),
+    storageText: $('#storageText'),
+    storageDot: $('#storageDot'),
+    syncStatus: $('#syncStatus'),
+    toast: $('#toast'),
+    fileHint: $('#fileHint'),
+    seedNote: $('#seedNote'),
+    footRight: $('#footRight')
+  };
+
+  // ── date / number helpers ─────────────────────────────────────
+  const shDateFmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+  });
+  const shTimeFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false
+  });
+
+  function shanghaiDate(d = new Date()) {
+    const parts = shDateFmt.formatToParts(d);
+    const get = t => parts.find(p => p.type === t)?.value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  }
+  function shanghaiTime(d = new Date()) {
+    return shTimeFmt.format(d);
+  }
+  function today() { return shanghaiDate(); }
+  function addDays(dateStr, days) {
+    const d = new Date(`${dateStr}T12:00:00+08:00`);
+    d.setDate(d.getDate() + days);
+    return shanghaiDate(d);
+  }
+  function shortDate(dateStr) {
+    if (!dateStr) return '--';
+    return dateStr.slice(5);
+  }
+  function fmtYi(value, digits = 2) {
+    if (!Number.isFinite(value)) return '--';
+    return (value / YI).toLocaleString('zh-CN', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
+  }
+  function fmtSignedYi(value) {
+    if (!Number.isFinite(value)) return '--';
+    const s = fmtYi(Math.abs(value));
+    return `${value > 0 ? '+' : value < 0 ? '−' : ''}${s}`;
+  }
+  function fmtPct(value) {
+    if (!Number.isFinite(value)) return '--';
+    const s = Math.abs(value).toFixed(2);
+    return `${value > 0 ? '+' : value < 0 ? '−' : ''}${s}%`;
+  }
+  function applySignClass(el, value) {
+    if (!el) return;
+    el.classList.remove('up', 'down', 'flat');
+    if (!Number.isFinite(value) || value === 0) el.classList.add('flat');
+    else if (value > 0) el.classList.add('up');
+    else el.classList.add('down');
+  }
+  function inferExchange(code) {
+    if (/^[56]/.test(code)) return 'SSE';
+    if (/^[13]/.test(code)) return 'SZSE';
+    return 'SSE';
+  }
+  function exchangeName(code, fallback) {
+    return EXCHANGE_LABEL[fallback || inferExchange(code)] || '交易所';
+  }
+
+  // ── storage ───────────────────────────────────────────────────
+  function blankStore() {
+    return { version: 2, funds: {}, updatedAt: null };
+  }
+
+  function normalizePoints(rawPoints) {
+    const points = {};
+    const isValid = (date, value) => /^\d{4}-\d{2}-\d{2}$/.test(date)
+      && Number.isFinite(value) && value > 0;
+    if (Array.isArray(rawPoints)) {
+      for (const row of rawPoints) {
+        if (Array.isArray(row) && row.length >= 2) {
+          const date = String(row[0] || '');
+          const value = Number(row[1]);
+          if (isValid(date, value)) points[date] = value;
+        } else if (row && typeof row === 'object') {
+          const date = String(row.date || row.size_date || '');
+          const value = Number(row.value ?? row.shares ?? row.current_size);
+          if (isValid(date, value)) points[date] = value;
+        }
+      }
+    } else if (rawPoints && typeof rawPoints === 'object') {
+      for (const [date, value] of Object.entries(rawPoints)) {
+        const num = Number(value);
+        if (isValid(String(date), num)) points[String(date)] = num;
+      }
+    }
+    return points;
+  }
+
+  function normalizeFund(raw, code) {
+    const f = raw && typeof raw === 'object' ? raw : {};
+    return {
+      code: String(f.code || code),
+      name: String(f.name || (PRESET_MAP.get(code)?.name) || `ETF ${code}`),
+      exchange: f.exchange === 'SZSE' ? 'SZSE' : (f.exchange === 'SSE' ? 'SSE' : inferExchange(code)),
+      points: normalizePoints(f.points),
+      updatedAt: f.updatedAt || null,
+      custom: !PRESET_MAP.has(code)
+    };
+  }
+
+  function loadStore() {
+    let loaded = blankStore();
+    if (hasLS) {
+      try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.funds && typeof parsed.funds === 'object') {
+            loaded.version = 2;
+            loaded.updatedAt = parsed.updatedAt || null;
+            for (const [code, fund] of Object.entries(parsed.funds)) {
+              loaded.funds[code] = normalizeFund(fund, code);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('读取本地数据失败', err);
+        state.memoryOnly = true;
+      }
+    }
+
+    // 把内置历史合并进本地库；已有日期不覆盖，避免回滚用户已更新的值。
+    let seedAdded = 0;
+    if (seedMeta?.funds) {
+      for (const [code, seedFund] of Object.entries(seedMeta.funds)) {
+        if (!loaded.funds[code]) loaded.funds[code] = normalizeFund(seedFund, code);
+        const fund = loaded.funds[code];
+        if (!fund.name && seedFund.name) fund.name = seedFund.name;
+        if (seedFund.exchange) fund.exchange = seedFund.exchange;
+        for (const row of (seedFund.points || [])) {
+          if (!Array.isArray(row) || row.length < 2) continue;
+          const [date, value] = row;
+          if (!fund.points[date] && Number.isFinite(Number(value)) && Number(value) > 0) {
+            fund.points[date] = Number(value);
+            seedAdded++;
+          }
+        }
+      }
+    }
+    store = loaded;
+    if (seedAdded) saveStore(false);
+    return loaded;
+  }
+
+  function saveStore(render = false) {
+    if (!store) return;
+    store.updatedAt = new Date().toISOString();
+    if (hasLS && !state.memoryOnly) {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      } catch (err) {
+        console.warn('保存本地数据失败', err);
+        state.memoryOnly = true;
+        toast('本地存储空间不足，数据将在本次会话中保留', 'warn');
+      }
+    }
+    if (render) renderStorage();
+  }
+
+  function ensureFund(code, patch = {}) {
+    if (!store.funds[code]) {
+      const preset = PRESET_MAP.get(code);
+      store.funds[code] = normalizeFund({
+        code,
+        name: patch.name || preset?.name || `ETF ${code}`,
+        exchange: patch.exchange || preset?.exchange || inferExchange(code)
+      }, code);
+    }
+    const fund = store.funds[code];
+    if (patch.name && patch.name !== fund.name) fund.name = patch.name;
+    if (patch.exchange) fund.exchange = patch.exchange;
+    return fund;
+  }
+
+  function seriesOf(code) {
+    const fund = store.funds[code];
+    if (!fund) return [];
+    return Object.entries(fund.points)
+      .map(([date, value]) => ({ date, value: Number(value) }))
+      .filter(p => Number.isFinite(p.value) && p.value > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function mergeRows(code, rows, overwrite = true) {
+    const fund = ensureFund(code);
+    let added = 0, updated = 0;
+    for (const row of rows) {
+      if (!row || !row.date || !Number.isFinite(Number(row.shares)) || Number(row.shares) <= 0) continue;
+      const date = String(row.date);
+      const value = Number(row.shares);
+      if (!fund.points[date]) { added++; fund.points[date] = value; }
+      else if (overwrite && fund.points[date] !== value) {
+        // 交易所接口按万份四舍五入，几十份的差异不算修订，但仍写入更精确值。
+        if (Math.abs(Number(fund.points[date]) - value) >= 1000) updated++;
+        fund.points[date] = value;
+      }
+      if (row.name) fund.name = row.name;
+    }
+    if (added || updated) fund.updatedAt = new Date().toISOString();
+    return { added, updated };
+  }
+
+  function mergePoint(code, date, value, overwrite = true) {
+    return mergeRows(code, [{ date, shares: value }], overwrite);
+  }
+
+  // ── API: Shenzhen exchange ────────────────────────────────────
+  async function fetchSzseRange(code, startDate, endDate) {
+    const rows = [];
+    let page = 1;
+    let pageCount = 1;
+    do {
+      const url = 'https://www.szse.cn/api/report/ShowReport/data?SHOWTYPE=JSON&CATALOGID=scsj_fund_jjgm&TABKEY=tab1&jjlb=ETF'
+        + `&random=${Math.random()}`
+        + `&tab1PAGENO=${page}`
+        + `&txtDm=${encodeURIComponent(code)}`
+        + `&txtStart=${encodeURIComponent(startDate)}`
+        + `&txtEnd=${encodeURIComponent(endDate)}`;
+      const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+      if (!res.ok) throw new Error(`深交所接口 HTTP ${res.status}`);
+      const json = await res.json();
+      const tab = Array.isArray(json) ? json[0] : null;
+      if (!tab) break;
+      if (tab.metadata?.pagecount) pageCount = Math.max(1, Number(tab.metadata.pagecount));
+      for (const row of (tab.data || [])) {
+        if (String(row.fund_code) !== String(code)) continue;
+        const raw = Number(String(row.current_size ?? '').replace(/,/g, ''));
+        const shares = raw * 10000;
+        if (row.size_date && Number.isFinite(shares) && shares > 0) {
+          rows.push({
+            date: String(row.size_date),
+            shares,
+            name: row.security_short_name ? String(row.security_short_name) : undefined
+          });
+        }
+      }
+      page++;
+      if (page > 30) break;
+    } while (page <= pageCount);
+    return rows.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async function fetchSzseLatestDate() {
+    // 深交所接口只对 Origin:null（file://）返回 ACAO:*；HTTP 页面下跳过，避免无意义的 CORS 报错。
+    if (location.protocol !== 'file:') return null;
+    const now = Date.now();
+    if (refDateCache.date && now - refDateCache.at < 3 * 60 * 1000) return refDateCache.date;
+    try {
+      const rows = await fetchSzseRange('159915', addDays(today(), -20), today());
+      const date = rows.length ? rows[rows.length - 1].date : null;
+      refDateCache = { date, at: now };
+      return date;
+    } catch (err) {
+      console.warn('获取深交所参考日期失败', err);
+      return refDateCache.date;
+    }
+  }
+
+  // ── API: Tencent quote (CORS-friendly, exact total shares) ───
+  async function fetchTencentQuote(code) {
+    const symbol = `${inferExchange(code) === 'SZSE' ? 'sz' : 'sh'}${code}`;
+    const url = `https://qt.gtimg.cn/q=${encodeURIComponent(symbol)}`;
+    const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+    if (!res.ok) throw new Error(`腾讯行情接口 HTTP ${res.status}`);
+    const buffer = await res.arrayBuffer();
+    let text;
+    try {
+      text = new TextDecoder('gb18030').decode(buffer);
+    } catch (_) {
+      text = new TextDecoder('utf-8').decode(buffer);
+    }
+    const match = text.match(/="([^"]*)"/);
+    if (!match) throw new Error('腾讯行情返回格式异常');
+    const f = match[1].split('~');
+    const shares = Number(f[72] || f[73] || f[76]);
+    if (!Number.isFinite(shares) || shares <= 0) {
+      throw new Error('未获取到有效份额数据');
+    }
+    const tm = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(f[30] || '');
+    const quoteTime = tm
+      ? new Date(`${tm[1]}-${tm[2]}-${tm[3]}T${tm[4]}:${tm[5]}:${tm[6]}+08:00`).getTime()
+      : Date.now();
+    return {
+      code: String(f[2] || code),
+      name: f[1] ? String(f[1]) : undefined,
+      shares,
+      floatShares: Number(f[73]) || null,
+      price: Number(f[3]) || null,
+      quoteTime
+    };
+  }
+
+  // ── refresh ───────────────────────────────────────────────────
+  function chooseSseDate(quote, last, refDate) {
+    const qDate = shanghaiDate(new Date(quote.quoteTime));
+    const nowDate = today();
+    const nowTime = shanghaiTime();
+    if (!last) {
+      if (refDate) return refDate;
+      return (qDate < nowDate || nowTime >= '19:00') ? qDate : null;
+    }
+    let candidate = refDate || null;
+
+    if (!candidate) {
+      // 没有交易所参考日时，晚间披露前不新增日期，只更新已有记录，避免写入周末日期。
+      candidate = (qDate < nowDate || nowTime >= '19:00') ? qDate : last.date;
+    }
+
+    // 深交所披露日可能早于/晚于上交所；若快照值发生变化，允许采用行情日期。
+    if (quote.shares !== last.value && qDate > candidate) {
+      if (qDate !== nowDate || nowTime >= '17:00') candidate = qDate;
+      else return null; // 盘中/盘后较早时值已变但日期未确认，先不写入，避免把新值记到旧日期。
+    }
+
+    if (candidate > last.date) {
+      // 交易日份额未变化时，等到 19:00 后再确认新日期，降低“未披露却先记一天”的概率。
+      if (quote.shares === last.value && nowTime < '19:00') return last.date;
+      return candidate;
+    }
+    if (candidate === last.date) return candidate;
+    return null;
+  }
+
+  async function refreshFund(code, options = {}) {
+    if (state.loading && !options.force) return;
+    const seq = ++state.refreshSeq;
+    state.loading = true;
+    updateRefreshButton();
+    setStatus('正在同步…', 'busy');
+    const fund = ensureFund(code);
+    const messages = [];
+    let hadError = null;
+
+    try {
+      // 深交所：file:// 下直接拉取官方日度区间（含历史与修订）；HTTP 下改用腾讯快照累积。
+      if (fund.exchange === 'SZSE' && location.protocol === 'file:') {
+        const current = seriesOf(code);
+        const lastDate = current.length ? current[current.length - 1].date : null;
+        const end = today();
+        const start = lastDate ? addDays(lastDate, -45) : addDays(end, -120);
+        try {
+          const rows = await fetchSzseRange(code, start, end);
+          const result = mergeRows(code, rows, true);
+          if (result.added || result.updated) {
+            messages.push(`深交所新增 ${result.added} 天${result.updated ? `，修订 ${result.updated} 天` : ''}`);
+          }
+        } catch (err) {
+          hadError = err;
+          console.warn(err);
+        }
+      }
+
+      // 腾讯行情快照：所有基金都取一次，用于名称和最新份额
+      let quote = null;
+      try {
+        quote = await fetchTencentQuote(code);
+      } catch (err) {
+        hadError = hadError || err;
+        console.warn(err);
+      }
+
+      if (quote) {
+        fund.name = quote.name || fund.name;
+        const current = seriesOf(code);
+        const last = current.length ? current[current.length - 1] : null;
+
+        const refDate = await fetchSzseLatestDate();
+        const targetDate = chooseSseDate(quote, last, refDate);
+        if (targetDate) {
+          const result = mergePoint(code, targetDate, quote.shares, true);
+          const exLabel = fund.exchange === 'SZSE' ? '深交所' : '上交所';
+          if (result.added) messages.push(`新增 ${targetDate} ${exLabel}快照`);
+          else if (result.updated) messages.push(`更新 ${targetDate} ${exLabel}快照`);
+        }
+      }
+
+      saveStore(true);
+      if (seq === state.refreshSeq && state.code === code) {
+        renderAll();
+        if (messages.length) setStatus(messages.join(' · '), 'ok');
+        else if (quote) setStatus('已是最新', 'ok');
+        else if (hadError) setStatus('使用本地历史', 'error');
+        else setStatus('已是最新', 'ok');
+        if (!quote && hadError && !messages.length && !options.silent) {
+          toast('最新快照获取失败，请检查网络后重试；本地历史已保留。', 'error');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      if (seq === state.refreshSeq) {
+        setStatus('同步失败', 'error');
+        if (!options.silent) toast(err.message || '同步失败', 'error');
+      }
+    } finally {
+      if (seq === state.refreshSeq) {
+        state.loading = false;
+        updateRefreshButton();
+      }
+    }
+  }
+
+  // ── UI: fund picker ───────────────────────────────────────────
+  function buildFundOptions() {
+    const groups = { SSE: [], SZSE: [], custom: [] };
+    for (const f of PRESETS) groups[f.exchange].push(f);
+    for (const [code, fund] of Object.entries(store.funds)) {
+      if (!PRESET_MAP.has(code)) {
+        groups.custom.push({ code, name: fund.name, exchange: fund.exchange });
+      }
+    }
+    const makeOption = f => `<option value="${f.code}">${f.code} · ${escapeHtml(f.name)}</option>`;
+    let html = '';
+    html += `<optgroup label="上交所">${groups.SSE.map(makeOption).join('')}</optgroup>`;
+    html += `<optgroup label="深交所">${groups.SZSE.map(makeOption).join('')}</optgroup>`;
+    if (groups.custom.length) {
+      html += `<optgroup label="自定义">${groups.custom.map(makeOption).join('')}</optgroup>`;
+    }
+    els.fundSelect.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[ch]));
+  }
+
+  function selectFund(code, options = {}) {
+    code = String(code || '').trim();
+    if (!/^\d{6}$/.test(code)) throw new Error('请输入 6 位数字基金代码');
+    const existing = store.funds[code];
+    const preset = PRESET_MAP.get(code);
+    if (!existing && !preset) {
+      ensureFund(code, { name: `ETF ${code}`, exchange: inferExchange(code) });
+    }
+    const fund = ensureFund(code);
+    state.code = code;
+    if (options.range) state.range = options.range;
+    if (!els.fundSelect.querySelector(`option[value="${code}"]`)) buildFundOptions();
+    els.fundSelect.value = code;
+    els.codeInput.value = code;
+    if (hasLS) {
+      try {
+        localStorage.setItem(LAST_KEY, code);
+        localStorage.setItem(RANGE_KEY, state.range);
+      } catch (_) {}
+    }
+    updateRangeButtons();
+    renderAll();
+    if (options.refresh !== false) refreshFund(code, { silent: true, force: true });
+  }
+
+  function updateRangeButtons() {
+    for (const btn of els.rangeTabs.querySelectorAll('button')) {
+      btn.classList.toggle('active', btn.dataset.range === state.range);
+    }
+  }
+
+  // ── UI: rendering ─────────────────────────────────────────────
+  function currentFund() { return store.funds[state.code]; }
+
+  function filteredSeries() {
+    const series = state.series;
+    if (!series.length) return [];
+    if (state.range === 'all') return series.slice();
+    const days = Number(state.range) || 365;
+    const latest = series[series.length - 1].date;
+    const cutoff = addDays(latest, -days);
+    return series.filter(p => p.date >= cutoff);
+  }
+
+  function renderAll() {
+    if (!state.code || !store) return;
+    const fund = currentFund();
+    if (!fund) return;
+    state.series = seriesOf(state.code);
+    state.visible = filteredSeries();
+    renderHeader();
+    renderKpis();
+    renderChart();
+    renderTable();
+    renderStorage();
+    renderSeedNote();
+  }
+
+  function renderHeader() {
+    const fund = currentFund();
+    const ex = EXCHANGE_LABEL[fund.exchange] || '交易所';
+    els.exchangeKicker.textContent = `${ex} · ${state.code}`;
+    els.fundName.textContent = fund.name || `ETF ${state.code}`;
+    const option = els.fundSelect.querySelector(`option[value="${state.code}"]`);
+    if (option) option.textContent = `${state.code} · ${fund.name || `ETF ${state.code}`}`;
+    const latest = state.series[state.series.length - 1];
+    const total = state.series.length;
+    els.fundSub.textContent = latest
+      ? `共 ${total} 个交易日记录 · 数据截至 ${latest.date} · ${fund.custom ? '自定义代码' : '预设基金'}`
+      : '暂无记录，点击右侧「刷新最新份额」获取第一条数据';
+    els.latestDate.textContent = latest ? latest.date : '--';
+  }
+
+  function renderKpis() {
+    const series = state.series;
+    const visible = state.visible;
+    const latest = series[series.length - 1];
+    const prev = series[series.length - 2];
+    const firstVisible = visible[0];
+    const lastVisible = visible[visible.length - 1];
+
+    if (latest) {
+      els.latestShare.textContent = fmtYi(latest.value, 2);
+      els.latestShareRaw.textContent = `${nf0.format(latest.value)} 份`;
+    } else {
+      els.latestShare.textContent = '--';
+      els.latestShareRaw.textContent = '--';
+    }
+
+    const dayDelta = latest && prev ? latest.value - prev.value : NaN;
+    const dayPct = prev && prev.value ? (dayDelta / prev.value) * 100 : NaN;
+    els.dayChange.textContent = Number.isFinite(dayDelta) ? fmtSignedYi(dayDelta) : '--';
+    applySignClass(els.dayChange, dayDelta);
+    els.dayChangePct.textContent = Number.isFinite(dayPct) ? fmtPct(dayPct) : '--';
+    applySignClass(els.dayChangePct, dayPct);
+
+    const rangeDelta = firstVisible && lastVisible ? lastVisible.value - firstVisible.value : NaN;
+    const rangePct = firstVisible && firstVisible.value ? (rangeDelta / firstVisible.value) * 100 : NaN;
+    els.rangeChange.textContent = Number.isFinite(rangePct) ? fmtPct(rangePct) : '--';
+    applySignClass(els.rangeChange, rangePct);
+    els.rangeChangeAbs.textContent = Number.isFinite(rangeDelta)
+      ? `区间 ${fmtSignedYi(rangeDelta)} 亿份`
+      : '--';
+
+    els.pointCount.textContent = visible.length || '--';
+    els.pointRange.textContent = visible.length
+      ? `${firstVisible.date} → ${lastVisible.date}`
+      : '--';
+
+    els.chartRangeText.textContent = visible.length
+      ? `${firstVisible.date} 至 ${lastVisible.date} · ${visible.length} 个交易日`
+      : '暂无可展示区间';
+  }
+
+  function renderSeedNote() {
+    if (currentFund()?.custom) {
+      els.seedNote.textContent = '自定义代码无内置历史 · 从首次查询开始累积';
+      return;
+    }
+    if (!seedMeta?.funds) { els.seedNote.textContent = '—'; return; }
+    let first = null, last = null;
+    for (const fund of Object.values(seedMeta.funds)) {
+      for (const row of (fund.points || [])) {
+        if (!Array.isArray(row) || !row[0]) continue;
+        if (!first || row[0] < first) first = row[0];
+        if (!last || row[0] > last) last = row[0];
+      }
+    }
+    els.seedNote.textContent = first && last
+      ? `内置历史至 ${last} · 最新记录自动追加`
+      : '最新记录自动追加';
+  }
+
+  function renderStorage() {
+    const funds = Object.keys(store.funds).filter(code => Object.keys(store.funds[code].points).length);
+    let total = 0;
+    for (const code of funds) total += Object.keys(store.funds[code].points).length;
+    const current = state.code ? Object.keys(store.funds[state.code]?.points || {}).length : 0;
+    els.storageText.textContent = `${state.memoryOnly ? '仅本次会话' : '本地已存'} · ${funds.length} 只基金 / ${nf0.format(total)} 条 · 当前 ${current} 条`;
+    els.storageDot.classList.toggle('warn', state.memoryOnly);
+    els.footRight.textContent = state.memoryOnly
+      ? '浏览器存储不可用 · 数据仅保留在本次会话'
+      : `本地存储 · ${nf0.format(total)} 条日记录`;
+  }
+
+  function renderTable() {
+    const data = state.visible;
+    els.tableCount.textContent = `${data.length} 条`;
+    if (!data.length) {
+      els.tableBody.innerHTML = '<tr><td colspan="5" class="table-empty">暂无数据，请刷新最新份额</td></tr>';
+      return;
+    }
+    const rows = [];
+    for (let i = data.length - 1; i >= 0; i--) {
+      const p = data[i];
+      const prev = i > 0 ? data[i - 1] : null;
+      const delta = prev ? p.value - prev.value : NaN;
+      const pct = prev && prev.value ? (delta / prev.value) * 100 : NaN;
+      const cls = Number.isFinite(delta) ? (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat') : 'flat';
+      rows.push(`<tr>
+        <td>${escapeHtml(p.date)}</td>
+        <td class="td-strong">${fmtYi(p.value, 2)}</td>
+        <td class="${cls} hide-sm">${Number.isFinite(delta) ? fmtSignedYi(delta) : '--'}</td>
+        <td class="${cls} hide-sm">${Number.isFinite(pct) ? fmtPct(pct) : '--'}</td>
+        <td class="hide-sm" style="color:var(--muted)">${nf0.format(p.value)}</td>
+      </tr>`);
+    }
+    els.tableBody.innerHTML = rows.join('');
+  }
+
+  // ── chart ─────────────────────────────────────────────────────
+  function svgEl(tag, attrs = {}) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === undefined || v === null) continue;
+      node.setAttribute(k, String(v));
+    }
+    return node;
+  }
+
+  function niceStep(raw) {
+    if (!Number.isFinite(raw) || raw <= 0) return 1;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / pow;
+    const step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+    return step * pow;
+  }
+
+  function axisNumber(v) {
+    if (v >= 100) return v.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+    if (v >= 10) return v.toLocaleString('zh-CN', { maximumFractionDigits: 1 });
+    return v.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  }
+
+  function renderChart() {
+    const svg = els.chart;
+    const wrap = els.chartWrap;
+    const data = state.visible;
+    const width = Math.max(300, Math.floor(wrap.clientWidth || 900));
+    const height = Math.max(300, Math.min(430, Math.round(width * 0.43)));
+    svg.innerHTML = '';
+    els.tooltip.classList.remove('show');
+    els.tooltip.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', String(height));
+
+    if (!data.length) {
+      els.chartEmpty.hidden = false;
+      els.tooltip.classList.remove('show');
+      state.chart = null;
+      return;
+    }
+    els.chartEmpty.hidden = true;
+
+    const margin = { top: 20, right: 26, bottom: 38, left: 64 };
+    const plotW = Math.max(10, width - margin.left - margin.right);
+    const plotH = Math.max(10, height - margin.top - margin.bottom);
+    const n = data.length;
+    const valuesYi = data.map(p => p.value / YI);
+    let min = Math.min(...valuesYi);
+    let max = Math.max(...valuesYi);
+    if (min === max) {
+      const pad = Math.max(0.01, min * 0.01);
+      min -= pad; max += pad;
+    }
+    let step = niceStep((max - min) / 4);
+    let yMin = Math.floor(min / step) * step;
+    let yMax = Math.ceil(max / step) * step;
+    if (yMin < 0) yMin = 0;
+    if (yMax <= yMin) yMax = yMin + step;
+
+    const x = i => margin.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+    const y = v => margin.top + (1 - (v - yMin) / (yMax - yMin)) * plotH;
+
+    // defs
+    const defs = svgEl('defs');
+    const grad = svgEl('linearGradient', { id: 'etfAreaGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
+    grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': '#14b8a6', 'stop-opacity': '.30' }));
+    grad.appendChild(svgEl('stop', { offset: '55%', 'stop-color': '#14b8a6', 'stop-opacity': '.12' }));
+    grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': '#14b8a6', 'stop-opacity': '.01' }));
+    defs.appendChild(grad);
+    const glow = svgEl('filter', { id: 'etfLineGlow', x: '-20%', y: '-20%', width: '140%', height: '140%' });
+    const drop = svgEl('feDropShadow', { dx: '0', dy: '4', stdDeviation: '5', 'flood-color': '#0f766e', 'flood-opacity': '.18' });
+    glow.appendChild(drop);
+    defs.appendChild(glow);
+    svg.appendChild(defs);
+
+    // horizontal grid + y labels
+    const ticks = [];
+    const tickCount = Math.max(2, Math.min(6, Math.round((yMax - yMin) / step)));
+    for (let i = 0; i <= tickCount; i++) {
+      const v = yMin + i * step;
+      if (v > yMax + step * 0.001) break;
+      ticks.push(v);
+    }
+    for (const v of ticks) {
+      const yy = y(v);
+      svg.appendChild(svgEl('line', {
+        x1: margin.left, y1: yy, x2: width - margin.right, y2: yy,
+        stroke: '#e8f0ed', 'stroke-width': '1', 'stroke-dasharray': '3 5'
+      }));
+      const label = svgEl('text', {
+        x: margin.left - 11, y: yy + 3.5, 'text-anchor': 'end',
+        fill: '#83958f', 'font-size': '10', 'font-family': 'var(--font)'
+      });
+      label.textContent = axisNumber(v);
+      svg.appendChild(label);
+    }
+
+    // y unit
+    const unit = svgEl('text', {
+      x: margin.left, y: margin.top - 8, fill: '#9aaca5', 'font-size': '9.5',
+      'font-family': 'var(--font)', 'letter-spacing': '.3'
+    });
+    unit.textContent = '亿份';
+    svg.appendChild(unit);
+
+    // x labels
+    const maxXLabels = Math.max(3, Math.min(7, Math.floor(plotW / 105)));
+    const idxSet = new Set();
+    for (let i = 0; i < maxXLabels; i++) {
+      idxSet.add(Math.round((i / (maxXLabels - 1)) * (n - 1)));
+    }
+    const idxs = [...idxSet].sort((a, b) => a - b);
+    for (const i of idxs) {
+      const xx = x(i);
+      svg.appendChild(svgEl('line', {
+        x1: xx, y1: margin.top + plotH, x2: xx, y2: margin.top + plotH + 4,
+        stroke: '#cfded8', 'stroke-width': '1'
+      }));
+      const label = svgEl('text', {
+        x: xx, y: height - 16, 'text-anchor': 'middle',
+        fill: '#83958f', 'font-size': '9.5', 'font-family': 'var(--font)'
+      });
+      label.textContent = shortDate(data[i].date);
+      svg.appendChild(label);
+    }
+
+    // area
+    const linePath = data.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(valuesYi[i]).toFixed(2)}`).join(' ');
+    if (n > 1) {
+      const areaPath = `${linePath} L${x(n - 1).toFixed(2)},${(margin.top + plotH).toFixed(2)} L${x(0).toFixed(2)},${(margin.top + plotH).toFixed(2)} Z`;
+      svg.appendChild(svgEl('path', { d: areaPath, fill: 'url(#etfAreaGrad)', stroke: 'none' }));
+    }
+
+    // line
+    if (n > 1) {
+      svg.appendChild(svgEl('path', {
+        d: linePath, fill: 'none', stroke: '#0f8f83', 'stroke-width': '2.4',
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+        filter: 'url(#etfLineGlow)'
+      }));
+      // subtle second line for depth
+      svg.appendChild(svgEl('path', {
+        d: linePath, fill: 'none', stroke: 'rgba(45, 212, 191, .55)',
+        'stroke-width': '0.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+      }));
+    }
+
+    // last point
+    const lastIdx = n - 1;
+    const lx = x(lastIdx), ly = y(valuesYi[lastIdx]);
+    svg.appendChild(svgEl('circle', { cx: lx, cy: ly, r: '8', fill: 'rgba(20,184,166,.12)' }));
+    svg.appendChild(svgEl('circle', { cx: lx, cy: ly, r: '4.2', fill: '#ffffff', stroke: '#0f8f83', 'stroke-width': '2.2' }));
+    if (n === 1) {
+      const note = svgEl('text', {
+        x: lx, y: ly - 15, 'text-anchor': 'middle',
+        fill: '#0f766e', 'font-size': '10.5', 'font-weight': '700', 'font-family': 'var(--font)'
+      });
+      note.textContent = fmtYi(data[0].value, 2);
+      svg.appendChild(note);
+    }
+
+    // hover layer
+    const hoverLine = svgEl('line', {
+      x1: 0, y1: margin.top, x2: 0, y2: margin.top + plotH,
+      stroke: '#7f9992', 'stroke-width': '1', 'stroke-dasharray': '3 4', opacity: '0'
+    });
+    const hoverDotOuter = svgEl('circle', { r: '8', fill: 'rgba(15,118,110,.10)', opacity: '0' });
+    const hoverDot = svgEl('circle', { r: '4.5', fill: '#0f766e', stroke: '#fff', 'stroke-width': '2', opacity: '0' });
+    svg.appendChild(hoverLine);
+    svg.appendChild(hoverDotOuter);
+    svg.appendChild(hoverDot);
+
+    const overlay = svgEl('rect', {
+      x: margin.left, y: margin.top, width: plotW, height: plotH,
+      fill: 'transparent', style: 'cursor: crosshair; touch-action: pan-y;'
+    });
+    svg.appendChild(overlay);
+
+    state.chart = {
+      data, width, height, margin, plotW, plotH, x, y, valuesYi, n,
+      hoverLine, hoverDot, hoverDotOuter
+    };
+
+    const showAt = idx => {
+      if (!state.chart) return;
+      idx = Math.max(0, Math.min(state.chart.n - 1, idx));
+      state.hoverIndex = idx;
+      const cx = x(idx);
+      const cy = y(valuesYi[idx]);
+      hoverLine.setAttribute('x1', cx);
+      hoverLine.setAttribute('x2', cx);
+      hoverLine.setAttribute('opacity', '1');
+      hoverDotOuter.setAttribute('cx', cx);
+      hoverDotOuter.setAttribute('cy', cy);
+      hoverDotOuter.setAttribute('opacity', '1');
+      hoverDot.setAttribute('cx', cx);
+      hoverDot.setAttribute('cy', cy);
+      hoverDot.setAttribute('opacity', '1');
+
+      const p = data[idx];
+      const prev = idx > 0 ? data[idx - 1] : null;
+      const delta = prev ? p.value - prev.value : NaN;
+      const pct = prev && prev.value ? (delta / prev.value) * 100 : NaN;
+      const cls = Number.isFinite(delta) ? (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat') : 'flat';
+      els.tooltip.innerHTML = `
+        <div class="tt-date">${escapeHtml(p.date)}</div>
+        <div class="tt-row"><span>份额</span><strong>${fmtYi(p.value, 2)} 亿份</strong></div>
+        <div class="tt-row"><span>日变动</span><strong class="${cls}">${Number.isFinite(delta) ? `${fmtSignedYi(delta)} 亿份` : '--'}</strong></div>
+        <div class="tt-row"><span>变动率</span><strong class="${cls}">${Number.isFinite(pct) ? fmtPct(pct) : '--'}</strong></div>
+      `;
+      els.tooltip.classList.add('show');
+      els.tooltip.setAttribute('aria-hidden', 'false');
+
+      // position tooltip within wrap
+      const wrapRect = wrap.getBoundingClientRect();
+      const scale = wrapRect.width ? width / wrapRect.width : 1;
+      const px = cx / scale;
+      const py = cy / scale;
+      const tw = 186;
+      let left = px + 14;
+      if (left + tw > wrap.clientWidth - 4) left = px - tw - 14;
+      left = Math.max(4, left);
+      let top = py - 76;
+      top = Math.max(4, Math.min(wrap.clientHeight - 102, top));
+      els.tooltip.style.left = `${left}px`;
+      els.tooltip.style.top = `${top}px`;
+    };
+
+    const hide = () => {
+      if (!state.chart) return;
+      hoverLine.setAttribute('opacity', '0');
+      hoverDot.setAttribute('opacity', '0');
+      hoverDotOuter.setAttribute('opacity', '0');
+      els.tooltip.classList.remove('show');
+      els.tooltip.setAttribute('aria-hidden', 'true');
+      state.hoverIndex = -1;
+    };
+
+    overlay.addEventListener('pointermove', evt => {
+      if (!state.chart) return;
+      const rect = svg.getBoundingClientRect();
+      const scale = rect.width ? width / rect.width : 1;
+      const px = (evt.clientX - rect.left) * scale;
+      const ratio = (px - margin.left) / plotW;
+      const idx = Math.round(ratio * (n - 1));
+      showAt(idx);
+    });
+    overlay.addEventListener('pointerdown', evt => {
+      overlay.setPointerCapture?.(evt.pointerId);
+    });
+    overlay.addEventListener('pointerleave', hide);
+    overlay.addEventListener('pointercancel', hide);
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────
+  function setStatus(text, kind = '') {
+    els.syncStatus.textContent = text;
+    els.syncStatus.classList.remove('busy', 'error');
+    if (kind === 'busy') els.syncStatus.classList.add('busy');
+    if (kind === 'error') els.syncStatus.classList.add('error');
+  }
+
+  function updateRefreshButton() {
+    els.refreshBtn.disabled = state.loading;
+    els.refreshBtn.classList.toggle('loading', state.loading);
+    els.refreshBtn.querySelector('.refresh-label').textContent = state.loading ? '同步中…' : '刷新最新份额';
+  }
+
+  function toast(message, kind = '') {
+    clearTimeout(toastTimer);
+    els.toast.textContent = message;
+    els.toast.className = `toast show ${kind}`.trim();
+    toastTimer = setTimeout(() => { els.toast.className = 'toast'; }, 4200);
+  }
+
+  function exportCsv() {
+    if (!state.code) return;
+    const fund = currentFund();
+    const data = state.visible;
+    if (!data.length) { toast('当前区间没有可导出的数据', 'warn'); return; }
+    const header = ['日期', '基金代码', '基金名称', '份额(份)', '份额(亿份)', '日变动(份)', '日变动率(%)'];
+    const lines = [header.join(',')];
+    for (let i = 0; i < data.length; i++) {
+      const p = data[i];
+      const prev = i > 0 ? data[i - 1] : null;
+      const delta = prev ? p.value - prev.value : '';
+      const pct = prev && prev.value ? ((delta / prev.value) * 100).toFixed(4) : '';
+      lines.push([
+        p.date, state.code, csvCell(fund.name), p.value,
+        (p.value / YI).toFixed(4), delta, pct
+      ].join(','));
+    }
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ETF份额_${state.code}_${data[0].date}_${data[data.length - 1].date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`已导出 ${data.length} 条记录`);
+  }
+
+  function csvCell(value) {
+    const s = String(value ?? '');
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  // ── events ────────────────────────────────────────────────────
+  function bindEvents() {
+    els.fundSelect.addEventListener('change', () => {
+      try { selectFund(els.fundSelect.value); }
+      catch (err) { toast(err.message, 'error'); }
+    });
+
+    els.queryBtn.addEventListener('click', () => {
+      const code = els.codeInput.value.replace(/\D/g, '').slice(0, 6);
+      if (!/^\d{6}$/.test(code)) { toast('请输入 6 位数字基金代码', 'warn'); els.codeInput.focus(); return; }
+      try { selectFund(code); }
+      catch (err) { toast(err.message, 'error'); }
+    });
+
+    els.codeInput.addEventListener('keydown', evt => {
+      if (evt.key === 'Enter') els.queryBtn.click();
+    });
+    els.codeInput.addEventListener('input', () => {
+      els.codeInput.value = els.codeInput.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    els.refreshBtn.addEventListener('click', () => {
+      if (state.code) refreshFund(state.code, { force: true });
+    });
+
+    els.exportBtn.addEventListener('click', exportCsv);
+
+    els.rangeTabs.addEventListener('click', evt => {
+      const btn = evt.target.closest('button[data-range]');
+      if (!btn) return;
+      state.range = btn.dataset.range;
+      if (hasLS) {
+        try { localStorage.setItem(RANGE_KEY, state.range); } catch (_) {}
+      }
+      updateRangeButtons();
+      renderAll();
+    });
+
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => renderChart(), 140);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.code) {
+        const fund = currentFund();
+        const last = state.series[state.series.length - 1];
+        if (fund && last && last.date < today()) {
+          // 回到页面时若已跨日，静默补一次最新快照
+          refreshFund(state.code, { silent: true });
+        }
+      }
+    });
+  }
+
+  function init() {
+    try {
+      seedMeta = JSON.parse($('#seed-data').textContent);
+    } catch (err) {
+      console.warn('内置历史解析失败', err);
+      seedMeta = { funds: {} };
+    }
+    loadStore();
+
+    if (location.protocol === 'file:') els.fileHint.hidden = false;
+    if (state.memoryOnly) els.storageDot.classList.add('warn');
+
+    // 排序：预设顺序，自定义追加
+    buildFundOptions();
+
+    let initial = null;
+    if (hasLS) {
+      try {
+        initial = localStorage.getItem(LAST_KEY);
+        const savedRange = localStorage.getItem(RANGE_KEY);
+        if (savedRange && ['30', '90', '365', 'all'].includes(savedRange)) state.range = savedRange;
+      } catch (_) {}
+    }
+    if (!initial || !/^\d{6}$/.test(initial)) initial = '510300';
+    bindEvents();
+    updateRangeButtons();
+
+    try {
+      selectFund(initial, { refresh: true });
+    } catch (err) {
+      console.error(err);
+      selectFund('510300', { refresh: true });
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
